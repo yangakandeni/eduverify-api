@@ -1,0 +1,23 @@
+{
+  "name": "eduverify-api",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Standalone verification API for South African institutions and qualifications, ported from eduverify/web/lib. EduVerify is its first client.",
+  "type": "module",
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "build": "esbuild src/router.ts --bundle --platform=node --target=node20 --format=cjs --outfile=dist/index.cjs"
+  },
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.1101.0",
+    "@aws-sdk/lib-dynamodb": "^3.1101.0"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.162",
+    "@types/node": "^20",
+    "esbuild": "^0.28.2",
+    "typescript": "^5",
+    "vitest": "^4.1.10"
+  }
+}
