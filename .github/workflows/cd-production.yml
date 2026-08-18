@@ -1,0 +1,71 @@
+name: CD (production)
+
+# Manual only — no push trigger. Run from the Actions tab after a PR has merged into
+# `main`. The `environment: production` block below is enforced by this repo's GitHub
+# Environment "Deployment branches and tags" rule (Settings -> Environments -> production),
+# which must be restricted to the `main` branch — that's what actually stops this from
+# running against the wrong ref, not this workflow file alone. Consider also turning on
+# "Required reviewers" for the production environment so an apply needs a second approval.
+on:
+  workflow_dispatch: {}
+
+concurrency:
+  group: cd-production
+  cancel-in-progress: false
+
+permissions:
+  id-token: write # required for AWS OIDC role assumption
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      AWS_REGION: af-south-1
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Test
+        run: npm run test
+
+      - name: Build Lambda bundle
+        run: npm run build
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.9.0"
+
+      - name: Terraform init
+        working-directory: terraform
+        run: terraform init -backend-config=environments/production.backend.hcl
+
+      - name: Terraform plan
+        working-directory: terraform
+        # See variables.tf's api_key_tiers_json note: left at the "{}" default until the
+        # first apply's generated key value is read back and stored as this repo secret.
+        env:
+          TF_VAR_api_key_tiers_json: ${{ secrets.API_KEY_TIERS_JSON }}
+        run: terraform plan -var-file=environments/production.tfvars -input=false -out=tfplan
+
+      - name: Terraform apply
+        working-directory: terraform
+        env:
+          TF_VAR_api_key_tiers_json: ${{ secrets.API_KEY_TIERS_JSON }}
+        run: terraform apply -input=false -auto-approve tfplan
