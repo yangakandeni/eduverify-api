@@ -1,24 +1,27 @@
 # eduverify-api
 
-Standalone verification API for South African institutions and qualifications.
-Reads from the same DynamoDB table `eduverify` ingests into; EduVerify's own web app is this
-API's first client.
-
-## Status: application code complete, no AWS infrastructure yet
+Standalone verification API for South African institutions and qualifications. Owns ingest
+(`ingestion/`) → parse → write → serve (`src/`) end to end. EduVerify's own web app is this
+API's first client, reading through it rather than a bundled seed or a directly-read table.
 
 `src/lib/` is forked (not shared via package) from `eduverify/web/lib/` — pure, dependency-free
-TS with no AWS calls except `dynamodb.ts`, which talks to the real `eduverify-institutions`
-table read-only.
+TS with no AWS calls except `dynamodb.ts`, which talks to the real institutions table
+read-only.
 
 `src/handlers/` (institutions, qualifications, verify, health), `src/matching/verifyQualification.ts`
 (the fuzzy CV/HR qualification matcher), `src/tiers.ts`/`src/keyTiers.ts` (tier gating), and
 `src/router.ts` (the single-Lambda internal router behind API Gateway's proxy integration) are
 all implemented and unit-tested against mocked DynamoDB calls — see `src/router.ts`'s route
-table for the full `/v1/*` surface.
+table for the full `/v1/*` surface. All tests mock `../lib/dynamodb`'s exported functions rather
+than running against DynamoDB Local.
 
-**No AWS infrastructure for this repo exists yet** — no API Gateway, no IAM role, no deployed
-Lambda, no `terraform/`. Nothing here has been exercised against a real or local DynamoDB table;
-all tests mock `../lib/dynamodb`'s exported functions rather than running against DynamoDB Local.
+`ingestion/` (Python) is a canonical copy of the `eduverify` repo's `parser/` — the DHET
+register scraper, plus `seed_dynamodb.py` for bulk-loading. It's deployed as a container-image
+Lambda (`ingestion/Dockerfile`), provisioned by `terraform/ingestion/`. `eduverify`'s own
+`parser/` and `terraform/main.tf` still exist too, deliberately — production there still reads
+its own DynamoDB table directly until that cutover happens, so that copy stays live until it's
+formally decommissioned. See `ingestion/CLAUDE.md` for details, including the account/state
+topology this migration adopted rather than recreating.
 
 ## Commands
 
