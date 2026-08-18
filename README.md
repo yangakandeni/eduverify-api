@@ -32,6 +32,46 @@ npm run typecheck    # tsc --noEmit
 npm run docs         # serve Swagger UI at http://localhost:4000
 ```
 
+## Local development (DynamoDB Local + curl/Postman)
+
+No AWS infrastructure exists for this repo yet (see above), but the full `/v1/*` surface can
+still be exercised locally against [DynamoDB Local](https://hub.docker.com/r/amazon/dynamodb-local)
+seeded from the (gitignored, local-only) `data/*.json` fixtures — the DHET private register plus
+public university/TVET lists, in the same shape `parser/dynamo_item.py` bakes into the real
+table.
+
+```bash
+npm run dynamodb:local   # terminal 1 — docker run amazon/dynamodb-local on :8000
+npm run seed:local       # terminal 2 — creates the table (if needed) and loads data/*.json
+npm run dev              # terminal 2 — dev server on :3000, proxying to router.ts
+```
+
+Then hit any route directly, e.g.:
+
+```bash
+curl http://localhost:3000/v1/health
+curl http://localhost:3000/v1/stats
+curl "http://localhost:3000/v1/institutions/search?q=cape+town"
+curl "http://localhost:3000/v1/institutions/list?page=1&pageSize=25"
+curl -X POST http://localhost:3000/v1/institutions/verify \
+  -H "Content-Type: application/json" \
+  -d '{"registrationNumber": "2000/HE07/015"}'
+```
+
+Same in Postman: point requests at `http://localhost:3000/v1/...` — `x-api-key` is read from the
+request header exactly like the deployed API Gateway route would (see `src/tiers.ts`).
+
+- `scripts/dev-server.ts` is a plain Node HTTP server standing in for API Gateway's proxy
+  integration — it translates a raw request into the same event shape `router.ts` is already
+  unit-tested against, and nothing else. `PORT` (default `3000`) overrides the port.
+- `scripts/seed-local-dynamodb.ts` creates the table/GSI1 if missing and batch-writes every
+  fixture as an item shaped the way `src/lib/dynamodb.ts`'s `toRecord()` expects to read it back
+  (public university/TVET entries get a synthesized `contacts`/`institutionType`, matching what
+  eduverify's own `scripts/seed_dynamodb.py` does against the real table).
+- Both scripts (and `src/lib/dynamodb.ts` itself) read `DYNAMODB_ENDPOINT` — set only for local
+  dev, never in a deployed environment — to point the AWS SDK at DynamoDB Local with a fixed
+  dummy credential pair instead of the real AWS endpoint/credentials.
+
 ## API docs
 
 `docs/openapi.yaml` is the source-of-truth OpenAPI 3 spec for the full `/v1/*` surface —
