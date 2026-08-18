@@ -34,18 +34,18 @@ paths:
         its one dependency, the institutions table, isn't reachable.
       security: []
       responses:
-        '200':
+        "200":
           description: Health status
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/HealthResult'
-        '500':
+                $ref: "#/components/schemas/HealthResult"
+        "500":
           description: Internal error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: "#/components/schemas/ErrorResponse"
   /v1/stats:
     get:
       operationId: getStats
@@ -56,18 +56,18 @@ paths:
         Scans every status partition (like /v1/institutions/list's status=ALL), not just REGISTERED
         — a total-corpus count rather than one filtered to a single register status.
       responses:
-        '200':
+        "200":
           description: Corpus-wide counts
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/StatsResult'
-        '500':
+                $ref: "#/components/schemas/StatsResult"
+        "500":
           description: Internal error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: "#/components/schemas/ErrorResponse"
   /v1/docs:
     get:
       operationId: getDocs
@@ -79,16 +79,16 @@ paths:
         spec from /v1/openapi.yaml.
       security: []
       responses:
-        '200':
+        "200":
           description: Swagger UI HTML page
           content:
             text/html: {}
-        '500':
+        "500":
           description: Internal error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: "#/components/schemas/ErrorResponse"
   /v1/openapi.yaml:
     get:
       operationId: getOpenApiYaml
@@ -98,16 +98,16 @@ paths:
       description: The exact contents of this file, served for /v1/docs's Swagger UI to fetch.
       security: []
       responses:
-        '200':
+        "200":
           description: OpenAPI 3 spec (YAML)
           content:
             text/yaml: {}
-        '500':
+        "500":
           description: Internal error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: "#/components/schemas/ErrorResponse"
   /v1/institutions/search:
     get:
       operationId: searchInstitutions
@@ -133,7 +133,7 @@ paths:
           in: query
           description: Exact-match institution type filter.
           schema:
-            $ref: '#/components/schemas/InstitutionType'
+            $ref: "#/components/schemas/InstitutionType"
         - name: page
           in: query
           description: 1-indexed page number.
@@ -148,18 +148,18 @@ paths:
             minimum: 1
             default: 25
       responses:
-        '200':
+        "200":
           description: One page of ranked search results
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SearchResult'
-        '500':
+                $ref: "#/components/schemas/SearchResult"
+        "500":
           description: Internal error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: "#/components/schemas/ErrorResponse"
   /v1/institutions/list:
     get:
       operationId: listInstitutions
@@ -190,7 +190,7 @@ paths:
         - name: type
           in: query
           schema:
-            $ref: '#/components/schemas/InstitutionType'
+            $ref: "#/components/schemas/InstitutionType"
         - name: status
           in: query
           description: >-
@@ -201,18 +201,18 @@ paths:
             default: REGISTERED
           example: REGISTERED
       responses:
-        '200':
+        "200":
           description: One page of institutions
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ListResult'
-        '500':
+                $ref: "#/components/schemas/ListResult"
+        "500":
           description: Internal error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: "#/components/schemas/ErrorResponse"
   /v1/institutions/{id}:
     get:
       operationId: getInstitution
@@ -228,7 +228,7 @@ paths:
           schema:
             type: string
       responses:
-        '200':
+        "200":
           description: The institution
           content:
             application/json:
@@ -238,19 +238,19 @@ paths:
                   - institution
                 properties:
                   institution:
-                    $ref: '#/components/schemas/InstitutionRecord'
-        '404':
+                    $ref: "#/components/schemas/InstitutionRecord"
+        "404":
           description: No institution with that id
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '500':
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
           description: Internal error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: "#/components/schemas/ErrorResponse"
   /v1/institutions/verify:
     post:
       operationId: verifyInstitution
@@ -268,26 +268,26 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/VerifyInstitutionRequest'
+              $ref: "#/components/schemas/VerifyInstitutionRequest"
       responses:
-        '200':
+        "200":
           description: Verification result
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/VerifyInstitutionResult'
-        '400':
+                $ref: "#/components/schemas/VerifyInstitutionResult"
+        "400":
           description: Malformed JSON body
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '500':
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
           description: Internal error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: "#/components/schemas/ErrorResponse"
   /v1/qualifications/verify:
     post:
       operationId: verifyQualification
@@ -303,26 +303,26 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/VerifyQualificationRequest'
+              $ref: "#/components/schemas/VerifyQualificationRequest"
       responses:
-        '200':
+        "200":
           description: Verification result
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/VerifyQualificationResult'
-        '400':
+                $ref: "#/components/schemas/VerifyQualificationResult"
+        "400":
           description: Malformed JSON body
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '500':
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
           description: Internal error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: "#/components/schemas/ErrorResponse"
   /v1/qualifications/verify/batch:
     post:
       operationId: verifyQualificationBatch
@@ -345,9 +345,9 @@ paths:
                 items:
                   type: array
                   items:
-                    $ref: '#/components/schemas/VerifyQualificationRequest'
+                    $ref: "#/components/schemas/VerifyQualificationRequest"
       responses:
-        '200':
+        "200":
           description: One verification result per input item, in the same order
           content:
             application/json:
@@ -359,25 +359,25 @@ paths:
                   results:
                     type: array
                     items:
-                      $ref: '#/components/schemas/VerifyQualificationResult'
-        '400':
+                      $ref: "#/components/schemas/VerifyQualificationResult"
+        "400":
           description: Malformed JSON body, or batch size exceeds the tier's maxBatchSize
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '403':
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
           description: This tier has no batch access
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '500':
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
           description: Internal error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: "#/components/schemas/ErrorResponse"
 components:
   schemas:
     ErrorResponse:
@@ -427,7 +427,7 @@ components:
         results:
           type: array
           items:
-            $ref: '#/components/schemas/InstitutionRecord'
+            $ref: "#/components/schemas/InstitutionRecord"
         page:
           type: number
         pageSize:
@@ -449,38 +449,38 @@ components:
         tradingName:
           type:
             - string
-            - 'null'
+            - "null"
         abbreviation:
           type:
             - string
-            - 'null'
+            - "null"
           description: Common short form, e.g. "UCT" — search-only, never a valid getDisplayName result.
         registration_number:
           type:
             - string
-            - 'null'
+            - "null"
         status:
           type:
             - string
-            - 'null'
+            - "null"
         address:
           type: string
         province:
           type:
             - string
-            - 'null'
+            - "null"
         contacts:
-          $ref: '#/components/schemas/Contacts'
+          $ref: "#/components/schemas/Contacts"
         faculties_and_programmes:
           type: array
           items:
-            $ref: '#/components/schemas/FacultyProgrammes'
+            $ref: "#/components/schemas/FacultyProgrammes"
         cancellation_reason:
           type:
             - string
-            - 'null'
+            - "null"
         institutionType:
-          $ref: '#/components/schemas/InstitutionType'
+          $ref: "#/components/schemas/InstitutionType"
         isFeatured:
           type: boolean
         isSponsored:
@@ -511,7 +511,7 @@ components:
         website:
           type:
             - string
-            - 'null'
+            - "null"
       required:
         - email
         - phone
@@ -524,7 +524,7 @@ components:
         programmes:
           type: array
           items:
-            $ref: '#/components/schemas/SaqaQualification'
+            $ref: "#/components/schemas/SaqaQualification"
       required:
         - faculty
         - programmes
@@ -578,7 +578,7 @@ components:
         institutions:
           type: array
           items:
-            $ref: '#/components/schemas/InstitutionRecord'
+            $ref: "#/components/schemas/InstitutionRecord"
         page:
           type: number
         pageSize:
@@ -611,7 +611,7 @@ components:
             - high
             - none
         institution:
-          $ref: '#/components/schemas/InstitutionRecord'
+          $ref: "#/components/schemas/InstitutionRecord"
         status:
           type: string
       required:
@@ -647,9 +647,9 @@ components:
             - fuzzy
             - none
         institution:
-          $ref: '#/components/schemas/InstitutionRecord'
+          $ref: "#/components/schemas/InstitutionRecord"
         qualification:
-          $ref: '#/components/schemas/SaqaQualification'
+          $ref: "#/components/schemas/SaqaQualification"
       required:
         - matched
         - confidence
