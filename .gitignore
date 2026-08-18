@@ -8,3 +8,6 @@ graphify-out/
 # Terraform local state/plugin cache and generated build artifacts — never committed
 terraform/**/.terraform/
 terraform/**/build/
+
+# Data
+data/
