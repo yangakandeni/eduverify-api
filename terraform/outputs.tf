@@ -16,3 +16,8 @@ output "api_key_values" {
   value       = module.usage_plans.api_key_values
   sensitive   = true
 }
+
+output "ci_deploy_role_arn" {
+  description = "ARN of the IAM role GitHub Actions assumes via OIDC to deploy this environment. Set as the AWS_ROLE_ARN variable on this environment's matching GitHub Environment (see .github/workflows/cd-staging.yml / cd-production.yml)."
+  value       = module.ci_oidc.role_arn
+}

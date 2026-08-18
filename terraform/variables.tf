@@ -91,3 +91,24 @@ variable "usage_plan_burst_limit" {
   type    = number
   default = 20
 }
+
+variable "github_repo" {
+  description = "GitHub repository allowed to assume this environment's CI deploy role via OIDC, as \"owner/repo\"."
+  type        = string
+  default     = "yangakandeni/eduverify-api"
+}
+
+variable "github_deploy_refs" {
+  description = "Git refs (e.g. \"refs/heads/main\") whose GitHub Actions runs may assume this environment's CI deploy role."
+  type        = list(string)
+}
+
+variable "tf_state_bucket_name" {
+  description = "Name of the S3 bucket holding this environment's Terraform remote state — same bucket named in environments/<env>.backend.hcl, duplicated here because backend config blocks can't be read as variables."
+  type        = string
+}
+
+variable "tf_lock_table_name" {
+  description = "Name of the DynamoDB table used for Terraform state locking — same table named in environments/<env>.backend.hcl."
+  type        = string
+}
