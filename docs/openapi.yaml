@@ -35,6 +35,8 @@ servers:
 tags:
   - name: Health
     description: Unauthenticated uptime check.
+  - name: Stats
+    description: Headline counts across the full institutions/qualifications corpus.
   - name: Institutions
     description: Lookup, search, browse, and identity verification for institutions.
   - name: Qualifications
@@ -66,6 +68,30 @@ paths:
         "500":
           $ref: "#/components/responses/InternalError"
 
+  /v1/stats:
+    get:
+      operationId: getStats
+      tags: [Stats]
+      summary: Headline counts across the full corpus
+      description: >
+        Scans every status partition (like `/v1/institutions/list`'s `status=ALL`), not just
+        REGISTERED — a total-corpus count rather than one filtered to a single register status.
+        `totalProvinces` counts only provinces actually resolved by `normalizeProvince` (excludes
+        "Unknown"), reflecting real geographic coverage rather than a fixed constant.
+      responses:
+        "200":
+          description: Corpus-wide counts
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StatsResult"
+              example:
+                totalInstitutions: 1842
+                totalQualifications: 15230
+                totalProvinces: 9
+        "500":
+          $ref: "#/components/responses/InternalError"
+
   /v1/institutions/search:
     get:
       operationId: searchInstitutions
@@ -74,7 +100,9 @@ paths:
       description: >
         Scans every status partition and fuzzy-ranks the whole set (typo/word-order/abbreviation
         tolerant), the same ranking `search.ts` uses for search-as-you-type. An empty or missing
-        `q` returns an empty result list rather than an error.
+        `q` returns an empty, page-1 result rather than an error. Paginated like
+        `/v1/institutions/list` — `total` is the full ranked match count, not just the returned
+        page.
       parameters:
         - name: q
           in: query
@@ -92,14 +120,27 @@ paths:
           description: Exact-match institution type filter.
           schema:
             $ref: "#/components/schemas/InstitutionType"
+        - name: page
+          in: query
+          description: 1-indexed page number.
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 25
       responses:
         "200":
-          description: Ranked search results
+          description: One page of ranked search results
           content:
             application/json:
               schema:
                 type: object
-                required: [query, results]
+                required: [query, results, page, pageSize, total]
                 properties:
                   query:
                     type: string
@@ -107,6 +148,13 @@ paths:
                     type: array
                     items:
                       $ref: "#/components/schemas/InstitutionRecord"
+                  page:
+                    type: integer
+                  pageSize:
+                    type: integer
+                  total:
+                    type: integer
+                    description: Total ranked matches across all pages.
         "500":
           $ref: "#/components/responses/InternalError"
 
@@ -132,7 +180,7 @@ paths:
           schema:
             type: integer
             minimum: 1
-            default: 24
+            default: 25
         - name: province
           in: query
           schema:
@@ -394,6 +442,20 @@ components:
           enum: [ok, degraded]
         dynamodb:
           type: boolean
+
+    StatsResult:
+      type: object
+      required: [totalInstitutions, totalQualifications, totalProvinces]
+      properties:
+        totalInstitutions:
+          type: integer
+          description: Institutions across every status partition, deduped by id.
+        totalQualifications:
+          type: integer
+          description: SAQA-matched qualifications across every institution's faculties_and_programmes.
+        totalProvinces:
+          type: integer
+          description: Distinct resolved provinces represented (excludes "Unknown").
 
     InstitutionType:
       type: string

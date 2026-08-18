@@ -10,6 +10,10 @@ terraform {
       source  = "hashicorp/archive"
       version = "~> 2.4"
     }
+    tls = {
+      source  = "hashicorp/tls"
+      version = "~> 4.0"
+    }
   }
 
   # Values supplied via partial configuration — see environments/*.backend.hcl and
@@ -39,7 +43,7 @@ module "iam_api" {
   # Distinct from eduverify/terraform/data-stack's ingestion Lambda role, which computes the
   # same "${project_name}-lambda-exec-role" name from the same project_name in this same
   # account — collided under the unsuffixed name during the first apply attempt here.
-  role_name = "${var.project_name}-serving-lambda-exec-role"
+  role_name          = "${var.project_name}-serving-lambda-exec-role"
   dynamodb_table_arn = var.dynamodb_table_arn
   dynamodb_gsi_arn   = var.dynamodb_gsi_arn
   log_group_name     = "/aws/lambda/${var.project_name}"
@@ -86,4 +90,21 @@ module "usage_plans" {
   rate_limit  = var.usage_plan_rate_limit
   burst_limit = var.usage_plan_burst_limit
   tags        = local.common_tags
+}
+
+# Bootstrap chicken-and-egg: this module creates the IAM role .github/workflows/cd-*.yml
+# assumes, so it can't be applied BY that workflow the first time. Per environment: apply
+# once by hand (`aws sso login --profile <profile>` + the usual init/plan/apply sequence
+# above), read the role ARN via `terraform output ci_deploy_role_arn`, and set it as the
+# AWS_ROLE_ARN variable on the matching GitHub Environment (Settings -> Environments ->
+# staging/production). CD applies can manage this module's own resources fine after that.
+module "ci_oidc" {
+  source = "./modules/ci_oidc"
+
+  project_name         = var.project_name
+  github_repo          = var.github_repo
+  github_deploy_refs   = var.github_deploy_refs
+  tf_state_bucket_name = var.tf_state_bucket_name
+  tf_lock_table_name   = var.tf_lock_table_name
+  tags                 = local.common_tags
 }

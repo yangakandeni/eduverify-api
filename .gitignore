@@ -9,3 +9,6 @@ graphify-out/
 terraform/**/.terraform/
 terraform/**/build/
 terraform/**/*.tfstate*
+
+# Data
+data/

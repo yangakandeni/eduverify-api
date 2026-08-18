@@ -8,6 +8,7 @@ const verifyInstitution = vi.fn();
 const verifyQualificationHandler = vi.fn();
 const verifyQualificationBatch = vi.fn();
 const checkHealth = vi.fn();
+const getStats = vi.fn();
 
 vi.mock("./handlers/institutions", () => ({
   getInstitution: (...args: unknown[]) => getInstitution(...args),
@@ -23,6 +24,9 @@ vi.mock("./handlers/qualifications", () => ({
 }));
 vi.mock("./handlers/health", () => ({
   checkHealth: (...args: unknown[]) => checkHealth(...args),
+}));
+vi.mock("./handlers/stats", () => ({
+  getStats: (...args: unknown[]) => getStats(...args),
 }));
 vi.mock("./keyTiers", () => ({ KEY_TIERS: { "dev-key": "developer" } }));
 
@@ -56,6 +60,7 @@ beforeEach(() => {
   verifyQualificationHandler.mockReset();
   verifyQualificationBatch.mockReset();
   checkHealth.mockReset();
+  getStats.mockReset();
 });
 
 describe("router: GET /v1/health", () => {
@@ -66,6 +71,17 @@ describe("router: GET /v1/health", () => {
 
     expect(result.statusCode).toBe(200);
     expect(JSON.parse(result.body)).toEqual({ status: "ok", dynamodb: true });
+  });
+});
+
+describe("router: GET /v1/stats", () => {
+  it("returns the stats handler's result as 200 JSON", async () => {
+    getStats.mockResolvedValueOnce({ totalInstitutions: 100, totalQualifications: 500, totalProvinces: 9 });
+
+    const result = await handler(makeEvent({ path: "/v1/stats" }));
+
+    expect(result.statusCode).toBe(200);
+    expect(JSON.parse(result.body)).toEqual({ totalInstitutions: 100, totalQualifications: 500, totalProvinces: 9 });
   });
 });
 
@@ -95,7 +111,7 @@ describe("router: GET /v1/institutions/{id}", () => {
 
 describe("router: GET /v1/institutions/search", () => {
   it("passes query and province/type filters through to the search handler", async () => {
-    searchInstitutionsHandler.mockResolvedValueOnce({ query: "UCT", results: [] });
+    searchInstitutionsHandler.mockResolvedValueOnce({ query: "UCT", results: [], page: 1, pageSize: 25, total: 0 });
 
     const result = await handler(
       makeEvent({
@@ -104,8 +120,26 @@ describe("router: GET /v1/institutions/search", () => {
       }),
     );
 
-    expect(searchInstitutionsHandler).toHaveBeenCalledWith("UCT", { province: "Western Cape", institutionType: undefined });
+    expect(searchInstitutionsHandler).toHaveBeenCalledWith("UCT", {
+      province: "Western Cape",
+      institutionType: undefined,
+      page: undefined,
+      pageSize: undefined,
+    });
     expect(result.statusCode).toBe(200);
+  });
+
+  it("parses page/pageSize as numbers", async () => {
+    searchInstitutionsHandler.mockResolvedValueOnce({ query: "UCT", results: [], page: 2, pageSize: 10, total: 0 });
+
+    await handler(
+      makeEvent({
+        path: "/v1/institutions/search",
+        queryStringParameters: { q: "UCT", page: "2", pageSize: "10" },
+      }),
+    );
+
+    expect(searchInstitutionsHandler).toHaveBeenCalledWith("UCT", expect.objectContaining({ page: 2, pageSize: 10 }));
   });
 });
 
