@@ -37,6 +37,8 @@ tags:
     description: Unauthenticated uptime check.
   - name: Stats
     description: Headline counts across the full institutions/qualifications corpus.
+  - name: Docs
+    description: This spec and its Swagger UI page, served by the API itself.
   - name: Institutions
     description: Lookup, search, browse, and identity verification for institutions.
   - name: Qualifications
@@ -89,6 +91,41 @@ paths:
                 totalInstitutions: 1842
                 totalQualifications: 15230
                 totalProvinces: 9
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /v1/docs:
+    get:
+      operationId: getDocs
+      tags: [Docs]
+      summary: Interactive Swagger UI for this spec
+      description: >
+        Serves this same spec's Swagger UI page directly from the running API — works
+        regardless of how/where the API itself is running (`npm run dev`'s local proxy, or a
+        real deployment), unlike the separate `npm run docs` static server. The page fetches
+        this spec from `/v1/openapi.yaml` (a relative `./openapi.yaml` reference, which
+        resolves to that path from this route).
+      security: []
+      responses:
+        "200":
+          description: Swagger UI HTML page
+          content:
+            text/html: {}
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /v1/openapi.yaml:
+    get:
+      operationId: getOpenApiYaml
+      tags: [Docs]
+      summary: This spec, as raw YAML
+      description: The exact contents of this file, served for `/v1/docs`'s Swagger UI to fetch.
+      security: []
+      responses:
+        "200":
+          description: OpenAPI 3 spec (YAML)
+          content:
+            text/yaml: {}
         "500":
           $ref: "#/components/responses/InternalError"
 
