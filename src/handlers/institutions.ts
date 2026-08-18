@@ -1,0 +1,86 @@
+import { STATUS_PARTITIONS, getInstitutionByPK, queryAllByStatus } from "../lib/dynamodb";
+import { searchInstitutions } from "../lib/search";
+import type { InstitutionRecord, SearchFilters } from "../lib/types";
+
+function dedupeById(institutions: InstitutionRecord[]): InstitutionRecord[] {
+  const seen = new Map<string, InstitutionRecord>();
+  for (const institution of institutions) {
+    if (!seen.has(institution.id)) seen.set(institution.id, institution);
+  }
+  return [...seen.values()];
+}
+
+export async function getInstitution(id: string): Promise<InstitutionRecord | null> {
+  return getInstitutionByPK(id);
+}
+
+export interface SearchResult {
+  query: string;
+  results: InstitutionRecord[];
+}
+
+/** GET /v1/institutions/search. Fetches every status partition in full and fuzzy-ranks the
+ * whole set with `search.ts`'s scoring — the same "scan everything, then rank" shape as
+ * EduVerify's own web/lib/search.ts, just backed by DynamoDB instead of a bundled local array,
+ * since this repo has no bundled seed to fall back to. An earlier version queried only exact
+ * registration-number and name-prefix hits (GSI1SK's begins_with is exact-prefix and
+ * case-sensitive), which meant lowercase or non-prefix queries — e.g. "cape town" — returned
+ * nothing: fine at this data's current scale (a few hundred institutions per partition, same
+ * scale `listInstitutions` already fetches in full); revisit if that stops being true. */
+export async function searchInstitutionsHandler(query: string, filters: SearchFilters = {}): Promise<SearchResult> {
+  const trimmed = query.trim();
+  if (!trimmed) return { query, results: [] };
+
+  const partitions = await Promise.all(STATUS_PARTITIONS.map((status) => queryAllByStatus(status)));
+  const candidates = dedupeById(partitions.flat());
+
+  const ranked = searchInstitutions(candidates, trimmed, filters);
+  return { query, results: ranked };
+}
+
+export interface ListParams {
+  page?: number;
+  pageSize?: number;
+  province?: string;
+  institutionType?: InstitutionRecord["institutionType"];
+  status?: string;
+}
+
+export interface ListResult {
+  institutions: InstitutionRecord[];
+  page: number;
+  pageSize: number;
+  total: number;
+}
+
+/** GET /v1/institutions/list — the paginated browse/collections source EduVerify's homepage
+ * needs (it used to read an entire bundled local array; there is no such array here). Fetches
+ * a full GSI1 status partition (see queryAllByStatus) then filters/paginates in memory — fine
+ * at this data's current scale, not designed to survive an order-of-magnitude data growth.
+ * `status=ALL` scans every partition instead (EduVerify's own homepage needs literally every
+ * institution regardless of status, the same "no permanent local fallback" cutover as search —
+ * see searchInstitutionsHandler); the default single-partition behavior is unchanged for every
+ * other caller. */
+export async function listInstitutions(params: ListParams = {}): Promise<ListResult> {
+  const page = params.page ?? 1;
+  const pageSize = params.pageSize ?? 24;
+  const status = (params.status ?? "REGISTERED").toUpperCase();
+
+  const all =
+    status === "ALL"
+      ? dedupeById((await Promise.all(STATUS_PARTITIONS.map((partition) => queryAllByStatus(partition)))).flat())
+      : await queryAllByStatus(status);
+  const filtered = all.filter((institution) => {
+    if (params.province && institution.province !== params.province) return false;
+    if (params.institutionType && institution.institutionType !== params.institutionType) return false;
+    return true;
+  });
+
+  const start = (page - 1) * pageSize;
+  return {
+    institutions: filtered.slice(start, start + pageSize),
+    page,
+    pageSize,
+    total: filtered.length,
+  };
+}
