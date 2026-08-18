@@ -26,7 +26,24 @@ all tests mock `../lib/dynamodb`'s exported functions rather than running agains
 npm install
 npm run test        # vitest
 npm run typecheck    # tsc --noEmit
+npm run docs         # serve Swagger UI at http://localhost:4000
 ```
+
+## API docs
+
+`docs/openapi.yaml` is the source-of-truth OpenAPI 3 spec for the full `/v1/*` surface —
+every route, request/response shape, and error case in `src/router.ts`. `docs/index.html` is a
+Swagger UI page that renders it, with "Try it out" enabled for every endpoint.
+
+Run `npm run docs` and open http://localhost:4000 (a plain static server is needed rather than
+opening `index.html` directly — browsers block a `file://` page from `fetch`-ing its sibling
+`openapi.yaml`). The `servers` block in the spec is a placeholder API Gateway host — once
+`terraform apply` has actually run, fill in the real `apiId` from `terraform output invoke_url`
+(top of the Swagger UI page) to make "Try it out" hit the real deployment; until then, the docs
+still fully describe the contract, they just have nothing live to call.
+
+Update `docs/openapi.yaml` alongside any change to `src/router.ts` — new routes, changed request/
+response shapes, or new error cases all belong there too.
 
 ## Why fork instead of share a package
 
