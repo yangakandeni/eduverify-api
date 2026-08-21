@@ -27,8 +27,10 @@ topology this migration adopted rather than recreating.
 
 ```bash
 npm install
-npm run test        # vitest
-npm run typecheck    # tsc --noEmit
+npm run test          # vitest
+npm run typecheck     # tsc --noEmit
+npm run docs:generate # regenerate docs/openapi.yaml from src/docs/routeSpec.ts + TS types
+npm run docs          # serve Swagger UI at http://localhost:4000
 ```
 
 ## Local development (DynamoDB Local + curl/Postman)
@@ -70,6 +72,32 @@ request header exactly like the deployed API Gateway route would (see `src/tiers
 - Both scripts (and `src/lib/dynamodb.ts` itself) read `DYNAMODB_ENDPOINT` — set only for local
   dev, never in a deployed environment — to point the AWS SDK at DynamoDB Local with a fixed
   dummy credential pair instead of the real AWS endpoint/credentials.
+
+## API docs
+
+`docs/openapi.yaml` is a **generated** OpenAPI 3 spec for the full `/v1/*` surface — don't hand-
+edit it. `src/docs/routeSpec.ts` is the source of truth for route metadata (method, path,
+summary, query params, auth); request/response *schemas* are generated straight from the actual
+exported TS interfaces (`src/lib/types.ts`, `src/handlers/*.ts`,
+`src/matching/verifyQualification.ts`, `src/router.ts`'s `ErrorResponse`) via
+`src/docs/generateOpenApi.ts` (built on `ts-json-schema-generator`), so the spec can't drift the
+way a hand-written one silently did before. Run `npm run docs:generate` after changing a route in
+`routeSpec.ts` or a referenced type — `src/docs/generateOpenApi.test.ts` fails with a pointer to
+that command if the checked-in file falls out of sync. `docs/index.html` is a Swagger UI page
+that renders the spec, with "Try it out" enabled for every endpoint.
+
+The API serves this same page itself at `GET /v1/docs` (spec at `GET /v1/openapi.yaml`) — so
+"Try it out" works against whatever's actually running the API, regardless of environment: point
+your browser at `http://localhost:3000/v1/docs` while `npm run dev` is up, or at the real
+`invoke_url` once deployed, with no separate process to remember to start. `npm run docs` (a
+plain static file server at http://localhost:4000) still works too, e.g. for viewing the spec
+before any API instance is running at all — a `file://` page can't `fetch` its sibling
+`openapi.yaml` directly, which is what that script's server is for.
+
+The spec's `servers` block is a placeholder API Gateway host — once `terraform apply` has
+actually run, fill in the real `apiId` from `terraform output invoke_url` to make "Try it out"
+hit the real deployment; until then, the docs still fully describe the contract, they just have
+nothing live to call beyond your own `npm run dev`.
 
 ## Why fork instead of share a package
 
