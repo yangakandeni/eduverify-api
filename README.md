@@ -9,7 +9,8 @@ TS with no AWS calls except `dynamodb.ts`, which talks to the real institutions 
 read-only.
 
 `src/handlers/` (institutions, qualifications, verify, health), `src/matching/verifyQualification.ts`
-(the fuzzy CV/HR qualification matcher), `src/tiers.ts`/`src/keyTiers.ts` (tier gating), and
+(the fuzzy qualification matcher devs use to verify a claimed qualification on a form), `src/tiers.ts`/
+`src/keyTiers.ts` (tier gating), and
 `src/router.ts` (the single-Lambda internal router behind API Gateway's proxy integration) are
 all implemented and unit-tested against mocked DynamoDB calls — see `src/router.ts`'s route
 table for the full `/v1/*` surface. All tests mock `../lib/dynamodb`'s exported functions rather

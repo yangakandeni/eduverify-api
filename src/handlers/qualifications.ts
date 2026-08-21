@@ -9,10 +9,11 @@ export async function verifyQualificationHandler(
   return verifyQualification(request);
 }
 
-/** POST /v1/qualifications/verify/batch — one CV commonly claims several qualifications from
- * the same institution, so this just fans out to the single-item matcher per claim rather than
- * doing anything institution-lookup-sharing-clever; `maxBatchSize` is enforced here (the caller
- * passes the tier's limit — see tiers.ts) rather than left to the caller to remember. */
+/** POST /v1/qualifications/verify/batch — a single form submission commonly claims several
+ * qualifications from the same institution, so this just fans out to the single-item matcher per
+ * claim rather than doing anything institution-lookup-sharing-clever; `maxBatchSize` is enforced
+ * here (the caller passes the tier's limit — see tiers.ts) rather than left to the caller to
+ * remember. */
 export async function verifyQualificationBatch(
   items: VerifyQualificationRequest[],
   maxBatchSize = 50,

@@ -15,11 +15,13 @@ export interface VerifyInstitutionResult {
   status?: string;
 }
 
-/** POST /v1/institutions/verify — the loan-org use case: a boolean-ish, high-confidence
- * answer, not a ranked list. A registration number that resolves is always "exact" (it's a
- * direct key lookup, no fuzziness possible); a name match is "exact" only when it equals a
- * candidate's name after normalization, "high" for anything else `search.ts` ranked first —
- * still a real institution, just not a verbatim name match (extension campus, minor wording). */
+/** POST /v1/institutions/verify — the form-verification use case: confirming that an institution
+ * name or registration number a user typed or picked from autocomplete is real, with a
+ * boolean-ish, high-confidence answer rather than a ranked list. A registration number that
+ * resolves is always "exact" (it's a direct key lookup, no fuzziness possible); a name match is
+ * "exact" only when it equals a candidate's name after normalization, "high" for anything else
+ * `search.ts` ranked first — still a real institution, just not a verbatim name match
+ * (extension campus, minor wording). */
 export async function verifyInstitution(request: VerifyInstitutionRequest): Promise<VerifyInstitutionResult> {
   const registrationNumber = request.registrationNumber?.trim();
   if (registrationNumber) {

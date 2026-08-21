@@ -199,9 +199,10 @@ export const ROUTE_SPEC: RouteSpec[] = [
     tags: ["Institutions"],
     summary: "High-confidence identity verification for an institution",
     description:
-      "The loan-org use case: a boolean-ish, high-confidence answer rather than a ranked list. A " +
-      "registration number that resolves is always \"exact\"; a name match is \"exact\" only when " +
-      "it equals a candidate's name after normalization, \"high\" otherwise.",
+      "The form-verification use case: confirming that an institution name or registration number " +
+      "a user typed or picked from autocomplete is real, with a boolean-ish, high-confidence answer " +
+      "rather than a ranked list. A registration number that resolves is always \"exact\"; a name " +
+      "match is \"exact\" only when it equals a candidate's name after normalization, \"high\" otherwise.",
     auth: true,
     requestType: "VerifyInstitutionRequest",
     responses: [
@@ -217,8 +218,9 @@ export const ROUTE_SPEC: RouteSpec[] = [
     tags: ["Qualifications"],
     summary: "Verify a single claimed qualification",
     description:
-      "Given a CV's claimed (qualification title, institution name) pair, finds the institution and " +
-      "checks whether it actually offers that qualification.",
+      "Given a user-claimed (qualification title, institution name) pair — e.g. a self-reported " +
+      "qualification on a form — finds the institution and checks whether it actually offers that " +
+      "qualification.",
     auth: true,
     requestType: "VerifyQualificationRequest",
     responses: [
@@ -234,9 +236,9 @@ export const ROUTE_SPEC: RouteSpec[] = [
     tags: ["Qualifications"],
     summary: "Verify several claimed qualifications in one call",
     description:
-      "One CV commonly claims several qualifications from the same institution, so this fans out to " +
-      "the single-item matcher per claim. Requires a tier with batch access (see src/tiers.ts); " +
-      "maxBatchSize is enforced per the caller's tier.",
+      "A single form submission commonly claims several qualifications from the same institution, so " +
+      "this fans out to the single-item matcher per claim. Requires a tier with batch access (see " +
+      "src/tiers.ts); maxBatchSize is enforced per the caller's tier.",
     auth: true,
     requestType: "VerifyQualificationRequest",
     requestWrap: { key: "items", array: true },

@@ -61,7 +61,7 @@ export interface SearchFilters {
 /** A single SAQA NLRD qualification registration, from any NQF sub-framework (HEQSF, OQSF,
  * GFETQSF, SFAP, SFNA). `framework` is the per-row discriminator for callers that need to
  * filter to one sub-framework — e.g. EduVerify's own product is HEQSF-only, but this API's
- * other consumers (CV/qualification verification) need the full set. */
+ * other form-verification consumers need the full set. */
 export interface SaqaQualification {
   qualId: number;
   title: string;

@@ -152,7 +152,7 @@ export function buildOpenApiDocument(routes: RouteSpec[]): OpenApiDocument {
     servers: [
       {
         url: "https://{apiId}.execute-api.af-south-1.amazonaws.com/{stage}",
-        description: "API Gateway stage (fill in apiId once infra is deployed)",
+        description: "API Gateway stage ID",
         variables: {
           apiId: { default: "your-api-id" },
           stage: { default: "staging", enum: ["staging", "production"] },
