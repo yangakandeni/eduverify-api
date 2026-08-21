@@ -9,8 +9,6 @@ const verifyQualificationHandler = vi.fn();
 const verifyQualificationBatch = vi.fn();
 const checkHealth = vi.fn();
 const getStats = vi.fn();
-const getDocsHtml = vi.fn();
-const getOpenApiYaml = vi.fn();
 
 vi.mock("./handlers/institutions", () => ({
   getInstitution: (...args: unknown[]) => getInstitution(...args),
@@ -29,10 +27,6 @@ vi.mock("./handlers/health", () => ({
 }));
 vi.mock("./handlers/stats", () => ({
   getStats: (...args: unknown[]) => getStats(...args),
-}));
-vi.mock("./handlers/docs", () => ({
-  getDocsHtml: (...args: unknown[]) => getDocsHtml(...args),
-  getOpenApiYaml: (...args: unknown[]) => getOpenApiYaml(...args),
 }));
 vi.mock("./keyTiers", () => ({ KEY_TIERS: { "dev-key": "developer" } }));
 
@@ -67,8 +61,6 @@ beforeEach(() => {
   verifyQualificationBatch.mockReset();
   checkHealth.mockReset();
   getStats.mockReset();
-  getDocsHtml.mockReset();
-  getOpenApiYaml.mockReset();
 });
 
 describe("router: GET /v1/health", () => {
@@ -90,30 +82,6 @@ describe("router: GET /v1/stats", () => {
 
     expect(result.statusCode).toBe(200);
     expect(JSON.parse(result.body)).toEqual({ totalInstitutions: 100, totalQualifications: 500, totalProvinces: 9 });
-  });
-});
-
-describe("router: GET /v1/docs", () => {
-  it("returns the Swagger UI page as HTML", async () => {
-    getDocsHtml.mockResolvedValueOnce("<html>docs</html>");
-
-    const result = await handler(makeEvent({ path: "/v1/docs" }));
-
-    expect(result.statusCode).toBe(200);
-    expect(result.headers?.["Content-Type"]).toBe("text/html; charset=utf-8");
-    expect(result.body).toBe("<html>docs</html>");
-  });
-});
-
-describe("router: GET /v1/openapi.yaml", () => {
-  it("returns the OpenAPI spec as YAML — the same relative './openapi.yaml' docs/index.html fetches from /v1/docs", async () => {
-    getOpenApiYaml.mockResolvedValueOnce("openapi: 3.0.3");
-
-    const result = await handler(makeEvent({ path: "/v1/openapi.yaml" }));
-
-    expect(result.statusCode).toBe(200);
-    expect(result.headers?.["Content-Type"]).toBe("text/yaml; charset=utf-8");
-    expect(result.body).toBe("openapi: 3.0.3");
   });
 });
 

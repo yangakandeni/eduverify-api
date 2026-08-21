@@ -4,7 +4,6 @@ import { verifyQualificationBatch, verifyQualificationHandler } from "./handlers
 import { verifyInstitution } from "./handlers/verify";
 import { checkHealth } from "./handlers/health";
 import { getStats } from "./handlers/stats";
-import { getDocsHtml, getOpenApiYaml } from "./handlers/docs";
 import { KEY_TIERS } from "./keyTiers";
 import type { InstitutionType } from "./lib/types";
 import { resolveTier } from "./tiers";
@@ -14,14 +13,6 @@ function json(statusCode: number, body: unknown): APIGatewayProxyResult {
     statusCode,
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
-  };
-}
-
-function text(statusCode: number, contentType: string, body: string): APIGatewayProxyResult {
-  return {
-    statusCode,
-    headers: { "Content-Type": contentType },
-    body,
   };
 }
 
@@ -57,14 +48,6 @@ export async function handler(event: APIGatewayProxyEvent): Promise<APIGatewayPr
 
     if (method === "GET" && path === "/v1/stats") {
       return json(200, await getStats());
-    }
-
-    if (method === "GET" && path === "/v1/docs") {
-      return text(200, "text/html; charset=utf-8", await getDocsHtml());
-    }
-
-    if (method === "GET" && path === "/v1/openapi.yaml") {
-      return text(200, "text/yaml; charset=utf-8", await getOpenApiYaml());
     }
 
     if (method === "GET" && path === "/v1/institutions/search") {

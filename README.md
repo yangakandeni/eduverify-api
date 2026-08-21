@@ -29,7 +29,6 @@ topology this migration adopted rather than recreating.
 npm install
 npm run test        # vitest
 npm run typecheck    # tsc --noEmit
-npm run docs         # serve Swagger UI at http://localhost:4000
 ```
 
 ## Local development (DynamoDB Local + curl/Postman)
@@ -71,28 +70,6 @@ request header exactly like the deployed API Gateway route would (see `src/tiers
 - Both scripts (and `src/lib/dynamodb.ts` itself) read `DYNAMODB_ENDPOINT` — set only for local
   dev, never in a deployed environment — to point the AWS SDK at DynamoDB Local with a fixed
   dummy credential pair instead of the real AWS endpoint/credentials.
-
-## API docs
-
-`docs/openapi.yaml` is the source-of-truth OpenAPI 3 spec for the full `/v1/*` surface —
-every route, request/response shape, and error case in `src/router.ts`. `docs/index.html` is a
-Swagger UI page that renders it, with "Try it out" enabled for every endpoint.
-
-The API serves this same page itself at `GET /v1/docs` (spec at `GET /v1/openapi.yaml`) — so
-"Try it out" works against whatever's actually running the API, regardless of environment: point
-your browser at `http://localhost:3000/v1/docs` while `npm run dev` is up, or at the real
-`invoke_url` once deployed, with no separate process to remember to start. `npm run docs` (a
-plain static file server at http://localhost:4000) still works too, e.g. for viewing the spec
-before any API instance is running at all — a `file://` page can't `fetch` its sibling
-`openapi.yaml` directly, which is what that script's server is for.
-
-The spec's `servers` block is a placeholder API Gateway host — once `terraform apply` has
-actually run, fill in the real `apiId` from `terraform output invoke_url` to make "Try it out"
-hit the real deployment; until then, the docs still fully describe the contract, they just have
-nothing live to call beyond your own `npm run dev`.
-
-Update `docs/openapi.yaml` alongside any change to `src/router.ts` — new routes, changed request/
-response shapes, or new error cases all belong there too.
 
 ## Why fork instead of share a package
 
