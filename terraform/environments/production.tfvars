@@ -14,3 +14,10 @@ api_keys = [
 ]
 
 log_retention_days = 30
+
+# CD (see .github/workflows/cd.yml) assumes this role via OIDC to deploy on manual
+# workflow_dispatch runs from the "main" branch. Same bucket/table named in
+# production.backend.hcl — duplicated here because backend config isn't readable as a variable.
+github_deploy_refs   = ["refs/heads/main"]
+tf_state_bucket_name = "eduverify-api-prod-tfstate-924285051814"
+tf_lock_table_name   = "eduverify-api-prod-tf-locks"

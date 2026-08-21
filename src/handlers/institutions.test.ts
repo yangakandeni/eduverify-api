@@ -58,7 +58,7 @@ describe("getInstitution", () => {
 describe("searchInstitutionsHandler", () => {
   it("returns an empty result for a blank query without touching DynamoDB", async () => {
     const result = await searchInstitutionsHandler("   ");
-    expect(result).toEqual({ query: "   ", results: [] });
+    expect(result).toEqual({ query: "   ", results: [], page: 1, pageSize: 25, total: 0 });
     expect(queryAllByStatus).not.toHaveBeenCalled();
   });
 
@@ -108,10 +108,36 @@ describe("searchInstitutionsHandler", () => {
 
     expect(result.results).toEqual([]);
   });
+
+  it("defaults to page 1 of 25 and reports total across every ranked match", async () => {
+    const institutions = Array.from({ length: 30 }, (_, i) =>
+      makeInstitution({ id: `i${i}`, name: `Cape College ${i}` }),
+    );
+    queryAllByStatus.mockImplementation((status: string) => Promise.resolve(status === "REGISTERED" ? institutions : []));
+
+    const result = await searchInstitutionsHandler("Cape College");
+
+    expect(result.page).toBe(1);
+    expect(result.pageSize).toBe(25);
+    expect(result.total).toBe(30);
+    expect(result.results).toHaveLength(25);
+  });
+
+  it("returns the requested page of ranked results", async () => {
+    const institutions = Array.from({ length: 30 }, (_, i) =>
+      makeInstitution({ id: `i${i}`, name: `Cape College ${i}` }),
+    );
+    queryAllByStatus.mockImplementation((status: string) => Promise.resolve(status === "REGISTERED" ? institutions : []));
+
+    const result = await searchInstitutionsHandler("Cape College", { page: 2, pageSize: 25 });
+
+    expect(result.results).toHaveLength(5);
+    expect(result.total).toBe(30);
+  });
 });
 
 describe("listInstitutions", () => {
-  it("defaults to the REGISTERED partition, page 1, pageSize 24", async () => {
+  it("defaults to the REGISTERED partition, page 1, pageSize 25", async () => {
     const institutions = Array.from({ length: 30 }, (_, i) => makeInstitution({ id: `i${i}`, name: `Institution ${i}` }));
     queryAllByStatus.mockResolvedValueOnce(institutions);
 
@@ -119,8 +145,8 @@ describe("listInstitutions", () => {
 
     expect(queryAllByStatus).toHaveBeenCalledWith("REGISTERED");
     expect(result.page).toBe(1);
-    expect(result.pageSize).toBe(24);
-    expect(result.institutions).toHaveLength(24);
+    expect(result.pageSize).toBe(25);
+    expect(result.institutions).toHaveLength(25);
     expect(result.total).toBe(30);
   });
 
@@ -128,10 +154,10 @@ describe("listInstitutions", () => {
     const institutions = Array.from({ length: 30 }, (_, i) => makeInstitution({ id: `i${i}`, name: `Institution ${i}` }));
     queryAllByStatus.mockResolvedValueOnce(institutions);
 
-    const result = await listInstitutions({ page: 2, pageSize: 24 });
+    const result = await listInstitutions({ page: 2, pageSize: 25 });
 
-    expect(result.institutions).toHaveLength(6);
-    expect(result.institutions[0].id).toBe("i24");
+    expect(result.institutions).toHaveLength(5);
+    expect(result.institutions[0].id).toBe("i25");
   });
 
   it("filters by province before paginating", async () => {
