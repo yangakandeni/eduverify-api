@@ -4,15 +4,30 @@ import { verifyQualificationBatch, verifyQualificationHandler } from "./handlers
 import { verifyInstitution } from "./handlers/verify";
 import { checkHealth } from "./handlers/health";
 import { getStats } from "./handlers/stats";
+import { getDocsHtml, getOpenApiYaml } from "./handlers/docs";
 import { KEY_TIERS } from "./keyTiers";
 import type { InstitutionType } from "./lib/types";
 import { resolveTier } from "./tiers";
+
+/** Wire shape of every non-2xx JSON body this router returns — see docs/openapi.yaml, generated
+ * from this type via src/docs/generateOpenApi.ts. */
+export interface ErrorResponse {
+  error: string;
+}
 
 function json(statusCode: number, body: unknown): APIGatewayProxyResult {
   return {
     statusCode,
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
+  };
+}
+
+function text(statusCode: number, contentType: string, body: string): APIGatewayProxyResult {
+  return {
+    statusCode,
+    headers: { "Content-Type": contentType },
+    body,
   };
 }
 
@@ -33,9 +48,9 @@ function institutionIdFromPath(event: APIGatewayProxyEvent): string {
   return decodeURIComponent(segments[segments.length - 1] ?? "");
 }
 
-/** Single-Lambda internal router (per Part 2's infra decision) — one entry point behind API
- * Gateway's proxy integration. Ordered so exact-match routes (search, list, verify) are checked
- * before the GET /v1/institutions/{id} catch-all, which would otherwise swallow them too. */
+/** Single Lambda internal - one entry point behind API Gateway's proxy integration.
+ * Ordered so exact-match routes (search, list, verify) are checked before
+ * the GET /v1/institutions/{id} catch-all, which would otherwise swallow them too. */
 export async function handler(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
   const method = event.httpMethod;
   const path = event.path;
@@ -48,6 +63,14 @@ export async function handler(event: APIGatewayProxyEvent): Promise<APIGatewayPr
 
     if (method === "GET" && path === "/v1/stats") {
       return json(200, await getStats());
+    }
+
+    if (method === "GET" && path === "/v1/docs") {
+      return text(200, "text/html; charset=utf-8", await getDocsHtml());
+    }
+
+    if (method === "GET" && path === "/v1/openapi.yaml") {
+      return text(200, "text/yaml; charset=utf-8", await getOpenApiYaml());
     }
 
     if (method === "GET" && path === "/v1/institutions/search") {

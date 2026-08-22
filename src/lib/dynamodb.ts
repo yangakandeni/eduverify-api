@@ -7,6 +7,13 @@ const TABLE_NAME = process.env.EDUVERIFY_TABLE_NAME ?? "eduverify-institutions";
 const REGION = process.env.AWS_REGION ?? "af-south-1";
 const REQUEST_TIMEOUT_MS = 2500;
 
+/** Set by local dev tooling only (scripts/dev-server.ts, scripts/seed-local-dynamodb.ts) to
+ * point at DynamoDB Local instead of real AWS — never set in a deployed environment. DynamoDB
+ * Local doesn't validate credentials, but the SDK still requires some value to be present, so
+ * a fixed dummy pair goes along with the endpoint override rather than requiring a developer to
+ * set up throwaway AWS credentials just to run this locally. */
+const LOCAL_ENDPOINT = process.env.DYNAMODB_ENDPOINT;
+
 /** GSI1PK values written by eduverify's parser/dynamo_item.py (institution.status, uppercased,
  * or UNKNOWN) plus scripts/seed_dynamodb.py's public-university/TVET status strings, uppercased
  * the same way. This repo is a read-only consumer of that same table — see parser/CLAUDE.md in
@@ -33,6 +40,9 @@ function getClient(): DynamoDBDocumentClient {
       new DynamoDBClient({
         region: REGION,
         requestHandler: { requestTimeout: REQUEST_TIMEOUT_MS },
+        ...(LOCAL_ENDPOINT
+          ? { endpoint: LOCAL_ENDPOINT, credentials: { accessKeyId: "local", secretAccessKey: "local" } }
+          : {}),
       })
     );
   }

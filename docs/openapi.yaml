@@ -1,108 +1,122 @@
 openapi: 3.0.3
 info:
   title: EduVerify API
-  description: |
-    Verification API for South African institutions and qualifications, backed by the
-    `eduverify-institutions` DynamoDB table.
-
-    **Status:** application code complete, infrastructure not yet deployed. The `servers` block
-    below is a placeholder for the API Gateway stage — fill in the real `apiId` once
-    `terraform apply` has run (see `terraform/outputs.tf`'s `invoke_url` output), and "Try it
-    out" will work against a real deployment.
-
-    Every route requires the `x-api-key` header **except** `/v1/health`, which is deliberately
-    unauthenticated so it can be polled without provisioning a key first.
-
-    This file is the source of truth for the API surface — update it alongside `src/router.ts`
-    whenever a route, request shape, or response shape changes.
-  version: "0.0.1"
-  contact:
-    name: EduVerify
-    url: https://github.com/
-  license:
-    name: UNLICENSED
-
+  description: >-
+    Verification API for South African institutions and qualifications.<br/>Every route requires the
+    `x-api-key` header except `/v1/health`, `/v1/docs`, and `/v1/openapi.yaml`.
+  version: 0.0.1
 servers:
-  - url: "https://{apiId}.execute-api.af-south-1.amazonaws.com/{stage}"
-    description: API Gateway stage (fill in apiId once infra is deployed)
+  - url: https://iw1e0x36ma.execute-api.af-south-1.amazonaws.com/{stage}
+    description: API Gateway ID
     variables:
-      apiId:
-        default: your-api-id
       stage:
         default: staging
-        enum: [staging, production]
-
+        enum:
+          - staging
+          - production
 tags:
   - name: Health
-    description: Unauthenticated uptime check.
   - name: Stats
-    description: Headline counts across the full institutions/qualifications corpus.
+  - name: Docs
   - name: Institutions
-    description: Lookup, search, browse, and identity verification for institutions.
   - name: Qualifications
-    description: CV/HR-style verification that an institution actually offers a claimed qualification.
-
 security:
   - ApiKeyAuth: []
-
 paths:
   /v1/health:
     get:
       operationId: getHealth
-      tags: [Health]
+      tags:
+        - Health
       summary: Check API and DynamoDB health
-      description: >
-        Unauthenticated. Returns "degraded" (not necessarily a 5xx) when the API process is up
-        but its one dependency, the institutions table, isn't reachable.
+      description: >-
+        Unauthenticated. Returns "degraded" (not necessarily a 5xx) when the API process is up but
+        its one dependency, the institutions table, isn't reachable.
       security: []
       responses:
-        "200":
+        '200':
           description: Health status
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HealthResult"
-              example:
-                status: ok
-                dynamodb: true
-        "500":
-          $ref: "#/components/responses/InternalError"
-
+                $ref: '#/components/schemas/HealthResult'
+        '500':
+          description: Internal error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /v1/stats:
     get:
       operationId: getStats
-      tags: [Stats]
+      tags:
+        - Stats
       summary: Headline counts across the full corpus
-      description: >
-        Scans every status partition (like `/v1/institutions/list`'s `status=ALL`), not just
-        REGISTERED — a total-corpus count rather than one filtered to a single register status.
-        `totalProvinces` counts only provinces actually resolved by `normalizeProvince` (excludes
-        "Unknown"), reflecting real geographic coverage rather than a fixed constant.
+      description: >-
+        Scans every status partition (like /v1/institutions/list's status=ALL), not just REGISTERED
+        — a total-corpus count rather than one filtered to a single register status.
       responses:
-        "200":
+        '200':
           description: Corpus-wide counts
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/StatsResult"
-              example:
-                totalInstitutions: 1842
-                totalQualifications: 15230
-                totalProvinces: 9
-        "500":
-          $ref: "#/components/responses/InternalError"
-
+                $ref: '#/components/schemas/StatsResult'
+        '500':
+          description: Internal error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /v1/docs:
+    get:
+      operationId: getDocs
+      tags:
+        - Docs
+      summary: Interactive Swagger UI for this spec
+      description: >-
+        Serves this same spec's Swagger UI page directly from the running API. The page fetches this
+        spec from /v1/openapi.yaml.
+      security: []
+      responses:
+        '200':
+          description: Swagger UI HTML page
+          content:
+            text/html: {}
+        '500':
+          description: Internal error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /v1/openapi.yaml:
+    get:
+      operationId: getOpenApiYaml
+      tags:
+        - Docs
+      summary: This spec, as raw YAML
+      description: The exact contents of this file, served for /v1/docs's Swagger UI to fetch.
+      security: []
+      responses:
+        '200':
+          description: OpenAPI 3 spec (YAML)
+          content:
+            text/yaml: {}
+        '500':
+          description: Internal error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /v1/institutions/search:
     get:
       operationId: searchInstitutions
-      tags: [Institutions]
+      tags:
+        - Institutions
       summary: Fuzzy search institutions by name
-      description: >
+      description: >-
         Scans every status partition and fuzzy-ranks the whole set (typo/word-order/abbreviation
-        tolerant), the same ranking `search.ts` uses for search-as-you-type. An empty or missing
-        `q` returns an empty, page-1 result rather than an error. Paginated like
-        `/v1/institutions/list` — `total` is the full ranked match count, not just the returned
-        page.
+        tolerant). An empty or missing q returns an empty, page-1 result rather than an error.
       parameters:
         - name: q
           in: query
@@ -119,7 +133,7 @@ paths:
           in: query
           description: Exact-match institution type filter.
           schema:
-            $ref: "#/components/schemas/InstitutionType"
+            $ref: '#/components/schemas/InstitutionType'
         - name: page
           in: query
           description: 1-indexed page number.
@@ -134,39 +148,27 @@ paths:
             minimum: 1
             default: 25
       responses:
-        "200":
+        '200':
           description: One page of ranked search results
           content:
             application/json:
               schema:
-                type: object
-                required: [query, results, page, pageSize, total]
-                properties:
-                  query:
-                    type: string
-                  results:
-                    type: array
-                    items:
-                      $ref: "#/components/schemas/InstitutionRecord"
-                  page:
-                    type: integer
-                  pageSize:
-                    type: integer
-                  total:
-                    type: integer
-                    description: Total ranked matches across all pages.
-        "500":
-          $ref: "#/components/responses/InternalError"
-
+                $ref: '#/components/schemas/SearchResult'
+        '500':
+          description: Internal error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /v1/institutions/list:
     get:
       operationId: listInstitutions
-      tags: [Institutions]
+      tags:
+        - Institutions
       summary: Paginated browse/listing of institutions
-      description: >
-        Fetches a full GSI1 status partition and paginates/filters in memory. `status=ALL` scans
-        every partition instead of the default single status partition. Not designed to survive
-        an order-of-magnitude data growth at the current in-memory pagination scale.
+      description: >-
+        Fetches a full GSI1 status partition and paginates/filters in memory. status=ALL scans every
+        partition instead of the default single status partition.
       parameters:
         - name: page
           in: query
@@ -188,410 +190,436 @@ paths:
         - name: type
           in: query
           schema:
-            $ref: "#/components/schemas/InstitutionType"
+            $ref: '#/components/schemas/InstitutionType'
         - name: status
           in: query
-          description: >
+          description: >-
             GSI1PK status partition to read, or "ALL" to scan and merge every partition. See
-            `STATUS_PARTITIONS` in `src/lib/dynamodb.ts` for the exhaustive list of valid values.
+            STATUS_PARTITIONS in src/lib/dynamodb.ts for the exhaustive list of valid values.
           schema:
             type: string
             default: REGISTERED
           example: REGISTERED
       responses:
-        "200":
+        '200':
           description: One page of institutions
           content:
             application/json:
               schema:
-                type: object
-                required: [institutions, page, pageSize, total]
-                properties:
-                  institutions:
-                    type: array
-                    items:
-                      $ref: "#/components/schemas/InstitutionRecord"
-                  page:
-                    type: integer
-                  pageSize:
-                    type: integer
-                  total:
-                    type: integer
-                    description: Total matching institutions across all pages.
-        "500":
-          $ref: "#/components/responses/InternalError"
-
+                $ref: '#/components/schemas/ListResult'
+        '500':
+          description: Internal error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /v1/institutions/{id}:
     get:
-      operationId: getInstitutionById
-      tags: [Institutions]
-      summary: Get one institution by its DynamoDB id (PK)
-      description: >
-        Direct `GetItem` by primary key — always finds the institution regardless of status,
-        unlike the GSI1-backed search/list routes. The id must be URL-encoded (it contains `#`).
+      operationId: getInstitution
+      tags:
+        - Institutions
+      summary: Fetch a single institution by id
+      description: Direct PK GetItem — finds an institution even if it isn't visible to GSI1-based search/list.
       parameters:
         - name: id
           in: path
           required: true
-          description: 'The institution''s PK, e.g. "INST#2000/HE07/015". URL-encode the `#`.'
+          description: The institution's DynamoDB PK, e.g. "INST#2000/HE07/015".
           schema:
             type: string
-          example: "INST%232000%2FHE07%2F015"
       responses:
-        "200":
-          description: Institution found
+        '200':
+          description: The institution
           content:
             application/json:
               schema:
                 type: object
-                required: [institution]
+                required:
+                  - institution
                 properties:
                   institution:
-                    $ref: "#/components/schemas/InstitutionRecord"
-        "404":
-          $ref: "#/components/responses/NotFound"
-        "500":
-          $ref: "#/components/responses/InternalError"
-
+                    $ref: '#/components/schemas/InstitutionRecord'
+        '404':
+          description: No institution with that id
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /v1/institutions/verify:
     post:
       operationId: verifyInstitution
-      tags: [Institutions]
-      summary: High-confidence identity verification for one institution
-      description: >
-        The loan-org use case: a boolean-ish, high-confidence answer rather than a ranked list.
-        A `registrationNumber` that resolves is always "exact" (a direct key lookup, no
-        fuzziness possible). A `name` match is "exact" only when it equals a candidate's name
-        after normalization, "high" for anything else search ranked first (extension campus,
-        minor wording difference, etc).
+      tags:
+        - Institutions
+      summary: High-confidence identity verification for an institution
+      description: >-
+        The form-verification use case: confirming that an institution name or registration number a
+        user typed or picked from autocomplete is real, with a boolean-ish, high-confidence answer
+        rather than a ranked list. A registration number that resolves is always "exact"; a name
+        match is "exact" only when it equals a candidate's name after normalization, "high"
+        otherwise.
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/VerifyInstitutionRequest"
-            examples:
-              byRegistrationNumber:
-                summary: Verify by registration number
-                value:
-                  registrationNumber: "2000/HE07/015"
-              byName:
-                summary: Verify by name
-                value:
-                  name: University of Cape Town
+              $ref: '#/components/schemas/VerifyInstitutionRequest'
       responses:
-        "200":
+        '200':
           description: Verification result
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/VerifyInstitutionResult"
-              example:
-                matched: true
-                confidence: exact
-                status: REGISTERED
-        "400":
-          $ref: "#/components/responses/BadRequest"
-        "500":
-          $ref: "#/components/responses/InternalError"
-
+                $ref: '#/components/schemas/VerifyInstitutionResult'
+        '400':
+          description: Malformed JSON body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /v1/qualifications/verify:
     post:
       operationId: verifyQualification
-      tags: [Qualifications]
-      summary: Verify a single claimed (qualification, institution) pair
-      description: >
-        Given a CV's claimed qualification title and institution name, finds the institution via
-        the same fuzzy ranking used for search, then checks whether it actually offers that
-        qualification. "exact" means normalized titles are equal; "fuzzy" reuses the
-        typo/word-order/abbreviation-tolerant matching from search-as-you-type, repurposed as a
-        verification signal.
+      tags:
+        - Qualifications
+      summary: Verify a single claimed qualification
+      description: >-
+        Given a user-claimed (qualification title, institution name) pair — e.g. a self-reported
+        qualification on a form — finds the institution and checks whether it actually offers that
+        qualification.
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/VerifyQualificationRequest"
-            example:
-              qualificationTitle: Bachelor of Science in Computer Science
-              institutionName: University of Cape Town
+              $ref: '#/components/schemas/VerifyQualificationRequest'
       responses:
-        "200":
+        '200':
           description: Verification result
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/VerifyQualificationResult"
-        "400":
-          $ref: "#/components/responses/BadRequest"
-        "500":
-          $ref: "#/components/responses/InternalError"
-
+                $ref: '#/components/schemas/VerifyQualificationResult'
+        '400':
+          description: Malformed JSON body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /v1/qualifications/verify/batch:
     post:
       operationId: verifyQualificationBatch
-      tags: [Qualifications]
+      tags:
+        - Qualifications
       summary: Verify several claimed qualifications in one call
-      description: >
-        Fans out to the single-item matcher per claim — one CV commonly claims several
-        qualifications from the same institution. Gated by API key tier: the `free` tier (the
-        default when no key, or an unrecognized key, is supplied) has no batch access at all and
-        gets a 403. Other tiers cap the batch size (`developer`: 10, `business`: 50, `internal`:
-        100) — a batch larger than the tier's cap gets a 400. See `src/tiers.ts`.
+      description: >-
+        A single form submission commonly claims several qualifications from the same institution,
+        so this fans out to the single-item matcher per claim. Requires a tier with batch access
+        (see src/tiers.ts); maxBatchSize is enforced per the caller's tier.
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required: [items]
+              required:
+                - items
               properties:
                 items:
                   type: array
                   items:
-                    $ref: "#/components/schemas/VerifyQualificationRequest"
-            example:
-              items:
-                - qualificationTitle: Bachelor of Science in Computer Science
-                  institutionName: University of Cape Town
-                - qualificationTitle: Diploma in Marketing
-                  institutionName: Damelin
+                    $ref: '#/components/schemas/VerifyQualificationRequest'
       responses:
-        "200":
-          description: One result per submitted item, in the same order
+        '200':
+          description: One verification result per input item, in the same order
           content:
             application/json:
               schema:
                 type: object
-                required: [results]
+                required:
+                  - results
                 properties:
                   results:
                     type: array
                     items:
-                      $ref: "#/components/schemas/VerifyQualificationResult"
-        "400":
-          description: Malformed JSON body, or batch size exceeds this tier's maximum
+                      $ref: '#/components/schemas/VerifyQualificationResult'
+        '400':
+          description: Malformed JSON body, or batch size exceeds the tier's maxBatchSize
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ErrorResponse"
-              example:
-                error: "Batch size 20 exceeds the maximum of 10 for this tier"
-        "403":
-          description: This tier has no batch access at all
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: This tier has no batch access
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ErrorResponse"
-              example:
-                error: Batch verification is not available on your tier
-        "500":
-          $ref: "#/components/responses/InternalError"
-
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 components:
-  securitySchemes:
-    ApiKeyAuth:
-      type: apiKey
-      in: header
-      name: x-api-key
-      description: >
-        API Gateway usage-plan key. Required on every route except `/v1/health`. Also determines
-        feature-gate tier (see `src/tiers.ts`) for `/v1/qualifications/verify/batch`; an
-        unrecognized or missing key resolves to the `free` tier everywhere else.
-
-  responses:
-    NotFound:
-      description: Resource not found
-      content:
-        application/json:
-          schema:
-            $ref: "#/components/schemas/ErrorResponse"
-          example:
-            error: Not found
-    BadRequest:
-      description: Malformed JSON request body
-      content:
-        application/json:
-          schema:
-            $ref: "#/components/schemas/ErrorResponse"
-          example:
-            error: Request body must be valid JSON
-    InternalError:
-      description: Unexpected server error
-      content:
-        application/json:
-          schema:
-            $ref: "#/components/schemas/ErrorResponse"
-          example:
-            error: Internal error
-
   schemas:
     ErrorResponse:
       type: object
-      required: [error]
       properties:
         error:
           type: string
-
+      required:
+        - error
+      additionalProperties: false
+      description: >-
+        Wire shape of every non-2xx JSON body this router returns — see docs/openapi.yaml, generated
+        from this type via src/docs/generateOpenApi.ts.
     HealthResult:
       type: object
-      required: [status, dynamodb]
       properties:
         status:
           type: string
-          enum: [ok, degraded]
+          enum:
+            - ok
+            - degraded
         dynamodb:
           type: boolean
-
+      required:
+        - status
+        - dynamodb
+      additionalProperties: false
     StatsResult:
       type: object
-      required: [totalInstitutions, totalQualifications, totalProvinces]
       properties:
         totalInstitutions:
-          type: integer
-          description: Institutions across every status partition, deduped by id.
+          type: number
         totalQualifications:
-          type: integer
-          description: SAQA-matched qualifications across every institution's faculties_and_programmes.
+          type: number
         totalProvinces:
-          type: integer
-          description: Distinct resolved provinces represented (excludes "Unknown").
-
-    InstitutionType:
-      type: string
-      enum:
-        - Public University
-        - Private Higher Education Institution
-        - TVET College
-
-    Contacts:
+          type: number
+      required:
+        - totalInstitutions
+        - totalQualifications
+        - totalProvinces
+      additionalProperties: false
+    SearchResult:
       type: object
-      required: [email, phone]
       properties:
-        email:
+        query:
+          type: string
+        results:
           type: array
           items:
-            type: string
-            format: email
-        phone:
-          type: array
-          items:
-            type: string
-        website:
-          type: string
-          nullable: true
-
-    SaqaQualification:
+            $ref: '#/components/schemas/InstitutionRecord'
+        page:
+          type: number
+        pageSize:
+          type: number
+        total:
+          type: number
+      required:
+        - query
+        - results
+        - page
+        - pageSize
+        - total
+      additionalProperties: false
+    InstitutionRecord:
       type: object
-      required: [qualId, title, nqfLevelRaw, subfield, originator, framework]
-      properties:
-        qualId:
-          type: integer
-        title:
-          type: string
-        nqfLevel:
-          type: integer
-        nqfLevelRaw:
-          type: string
-        credits:
-          type: integer
-        subfield:
-          type: string
-        originator:
-          type: string
-        framework:
-          type: string
-          description: NQF sub-framework, e.g. HEQSF, OQSF, GFETQSF, SFAP, SFNA.
-
-    FacultyProgrammes:
-      type: object
-      required: [faculty, programmes]
-      properties:
-        faculty:
-          type: string
-        programmes:
-          type: array
-          items:
-            $ref: "#/components/schemas/SaqaQualification"
-
-    Institution:
-      type: object
-      required: [name, address, contacts, faculties_and_programmes, institutionType]
       properties:
         name:
           type: string
         tradingName:
-          type: string
-          nullable: true
+          type:
+            - string
+            - 'null'
         abbreviation:
-          type: string
-          nullable: true
-          description: Common short form, e.g. "UCT" — search-only, never a display name.
+          type:
+            - string
+            - 'null'
+          description: Common short form, e.g. "UCT" — search-only, never a valid getDisplayName result.
         registration_number:
-          type: string
-          nullable: true
+          type:
+            - string
+            - 'null'
         status:
-          type: string
-          nullable: true
+          type:
+            - string
+            - 'null'
         address:
           type: string
         province:
-          type: string
-          nullable: true
+          type:
+            - string
+            - 'null'
         contacts:
-          $ref: "#/components/schemas/Contacts"
+          $ref: '#/components/schemas/Contacts'
         faculties_and_programmes:
           type: array
           items:
-            $ref: "#/components/schemas/FacultyProgrammes"
+            $ref: '#/components/schemas/FacultyProgrammes'
         cancellation_reason:
-          type: string
-          nullable: true
+          type:
+            - string
+            - 'null'
         institutionType:
-          $ref: "#/components/schemas/InstitutionType"
+          $ref: '#/components/schemas/InstitutionType'
         isFeatured:
           type: boolean
         isSponsored:
           type: boolean
         isRecentlyAdded:
           type: boolean
-
-    InstitutionRecord:
-      allOf:
-        - $ref: "#/components/schemas/Institution"
-        - type: object
-          required: [id]
-          properties:
-            id:
-              type: string
-              description: DynamoDB PK, e.g. "INST#2000/HE07/015".
-
+        id:
+          type: string
+      required:
+        - address
+        - contacts
+        - faculties_and_programmes
+        - id
+        - institutionType
+        - name
+      additionalProperties: false
+    Contacts:
+      type: object
+      properties:
+        email:
+          type: array
+          items:
+            type: string
+        phone:
+          type: array
+          items:
+            type: string
+        website:
+          type:
+            - string
+            - 'null'
+      required:
+        - email
+        - phone
+      additionalProperties: false
+    FacultyProgrammes:
+      type: object
+      properties:
+        faculty:
+          type: string
+        programmes:
+          type: array
+          items:
+            $ref: '#/components/schemas/SaqaQualification'
+      required:
+        - faculty
+        - programmes
+      additionalProperties: false
+      description: >-
+        An institution's SAQA-matched qualifications, grouped by subfield ("faculty"). Baked into
+        data/institutions.json / public_universities.json / public_tvets.json by
+        web/scripts/bakeFacultiesAndProgrammes.ts (in the eduverify repo) — an institution/faculty
+        with no SAQA match gets an empty array, never omitted or null.
+    SaqaQualification:
+      type: object
+      properties:
+        qualId:
+          type: number
+        title:
+          type: string
+        nqfLevel:
+          type: number
+        nqfLevelRaw:
+          type: string
+        credits:
+          type: number
+        subfield:
+          type: string
+        originator:
+          type: string
+        framework:
+          type: string
+      required:
+        - qualId
+        - title
+        - nqfLevelRaw
+        - subfield
+        - originator
+        - framework
+      additionalProperties: false
+      description: >-
+        A single SAQA NLRD qualification registration, from any NQF sub-framework (HEQSF, OQSF,
+        GFETQSF, SFAP, SFNA). `framework` is the per-row discriminator for callers that need to
+        filter to one sub-framework — e.g. EduVerify's own product is HEQSF-only, but this API's
+        other form-verification consumers need the full set.
+    InstitutionType:
+      type: string
+      enum:
+        - Public University
+        - Private Higher Education Institution
+        - TVET College
+    ListResult:
+      type: object
+      properties:
+        institutions:
+          type: array
+          items:
+            $ref: '#/components/schemas/InstitutionRecord'
+        page:
+          type: number
+        pageSize:
+          type: number
+        total:
+          type: number
+      required:
+        - institutions
+        - page
+        - pageSize
+        - total
+      additionalProperties: false
     VerifyInstitutionRequest:
       type: object
-      description: At least one of `name` or `registrationNumber` should be supplied.
       properties:
         name:
           type: string
         registrationNumber:
           type: string
-
+      additionalProperties: false
     VerifyInstitutionResult:
       type: object
-      required: [matched, confidence]
       properties:
         matched:
           type: boolean
         confidence:
           type: string
-          enum: [exact, high, none]
+          enum:
+            - exact
+            - high
+            - none
         institution:
-          $ref: "#/components/schemas/InstitutionRecord"
+          $ref: '#/components/schemas/InstitutionRecord'
         status:
           type: string
-
+      required:
+        - matched
+        - confidence
+      additionalProperties: false
     VerifyQualificationRequest:
       type: object
-      required: [qualificationTitle, institutionName]
       properties:
         qualificationTitle:
           type: string
@@ -599,21 +627,35 @@ components:
           type: string
         framework:
           type: string
-          description: >
-            Optional NQF sub-framework filter (HEQSF, OQSF, GFETQSF, SFAP, SFNA). Omitted by
-            default — unlike EduVerify's own HEQSF-only product, this API's other consumers need
-            occupational and other qualifications verified too.
-
+          description: >-
+            Optional NQF sub-framework filter (HEQSF, OQSF, GFETQSF, SFAP, SFNA). Omitted by default
+            — unlike EduVerify's own product, this API is not HEQSF-only, since other
+            form-verification consumers need occupational and other qualification frameworks too.
+      required:
+        - qualificationTitle
+        - institutionName
+      additionalProperties: false
     VerifyQualificationResult:
       type: object
-      required: [matched, confidence]
       properties:
         matched:
           type: boolean
         confidence:
           type: string
-          enum: [exact, fuzzy, none]
+          enum:
+            - exact
+            - fuzzy
+            - none
         institution:
-          $ref: "#/components/schemas/InstitutionRecord"
+          $ref: '#/components/schemas/InstitutionRecord'
         qualification:
-          $ref: "#/components/schemas/SaqaQualification"
+          $ref: '#/components/schemas/SaqaQualification'
+      required:
+        - matched
+        - confidence
+      additionalProperties: false
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: x-api-key

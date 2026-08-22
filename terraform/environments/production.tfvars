@@ -1,12 +1,3 @@
-# Production environment — deployed into the eduverify-api-prod AWS account (924285051814).
-# Mirrors staging.tfvars exactly, different account/names — see that file's comment for the
-# overall account-topology rationale.
-# Apply with:
-#   aws sso login --profile eduverify-api-prod
-#   npm run build   (from the repo root — produces dist/index.cjs the Lambda module zips up)
-#   AWS_PROFILE=eduverify-api-prod terraform init -backend-config=environments/production.backend.hcl
-#   AWS_PROFILE=eduverify-api-prod terraform plan -var-file=environments/production.tfvars
-
 environment  = "production"
 project_name = "eduverify-api-prod"
 stage_name   = "production"

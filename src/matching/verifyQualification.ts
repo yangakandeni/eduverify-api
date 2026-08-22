@@ -9,8 +9,8 @@ export interface VerifyQualificationRequest {
   qualificationTitle: string;
   institutionName: string;
   /** Optional NQF sub-framework filter (HEQSF, OQSF, GFETQSF, SFAP, SFNA). Omitted by
-   * default — unlike EduVerify's own product, this API is not HEQSF-only, since the CV/HR
-   * use case needs occupational and other qualifications verified too. */
+   * default — unlike EduVerify's own product, this API is not HEQSF-only, since other
+   * form-verification consumers need occupational and other qualification frameworks too. */
   framework?: string;
 }
 
@@ -21,11 +21,12 @@ export interface VerifyQualificationResult {
   qualification?: SaqaQualification;
 }
 
-/** POST /v1/qualifications/verify — given a CV's claimed (qualification title, institution
- * name) pair, finds the institution and checks whether it actually offers that qualification.
- * "Exact" means the normalized titles are equal; "fuzzy" reuses the same typo/word-order/
- * abbreviation tolerance `qualificationSearch.ts` already provides for search-as-you-type,
- * repurposed here as a verification signal rather than a ranking one. */
+/** POST /v1/qualifications/verify — given a user-claimed (qualification title, institution
+ * name) pair — e.g. a self-reported qualification on a signup or application form — finds the
+ * institution and checks whether it actually offers that qualification. "Exact" means the
+ * normalized titles are equal; "fuzzy" reuses the same typo/word-order/abbreviation tolerance
+ * `qualificationSearch.ts` already provides for search-as-you-type, repurposed here as a
+ * verification signal rather than a ranking one. */
 export async function verifyQualification(request: VerifyQualificationRequest): Promise<VerifyQualificationResult> {
   const institutionName = request.institutionName.trim();
   const candidates = await queryByNamePrefix(institutionName);

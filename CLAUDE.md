@@ -13,10 +13,12 @@ Every new feature, change, or bug fix must be built test-driven (TDD): write or 
 
 ## What this is
 
-Standalone verification API for South African institutions and qualifications, now owning
-ingest → parse → write (`ingestion/`) as well as serving (`src/`). EduVerify's own web app is
-this API's first client, but the API is designed for other consumers too (e.g. CV/HR
-qualification verification, which needs non-HEQSF frameworks EduVerify's own product doesn't).
+Standalone verification API for South African institutions and qualifications,
+Owns ingest → parse → write (`ingestion/`) as well as serving (`src/`). EduVerify's own web app is
+this API's first client, but the API is released for external developers too — the target use
+case is form-field autocomplete/verification (an institution or qualification picker, similar in
+spirit to what getAddress.io does for postal addresses), not a bundled EduVerify feature. Other
+consumers need non-HEQSF frameworks EduVerify's own product doesn't.
 
 The serving side (`src/`, `terraform/{main.tf,modules/{iam_api,lambda_api,api_gateway,
 usage_plans}}`) reads the institutions DynamoDB table read-only; all its tests mock
@@ -118,12 +120,13 @@ deploy time via the `EDUVERIFY_API_KEY_TIERS` env var (JSON), never committed to
 unrecognized or missing key always resolves to the `free` tier.
 
 **Qualification matching (`src/matching/verifyQualification.ts`):** given a claimed
-(qualification title, institution name) pair — the CV/HR verification use case — finds the
-institution via the same fuzzy `searchInstitutions` ranking used for search-as-you-type, then
-checks its `faculties_and_programmes` for an exact-normalized or fuzzy title match. Confidence is
-`"exact"` / `"fuzzy"` / `"none"`, distinct from `verifyInstitution`'s `"exact"` / `"high"` /
-`"none"` (a different use case: loan-org identity verification wants a boolean-ish high-confidence
-answer, not a ranked list).
+(qualification title, institution name) pair — the form-verification use case, e.g. confirming a
+self-reported qualification field — finds the institution via the same fuzzy
+`searchInstitutions` ranking used for search-as-you-type, then checks its
+`faculties_and_programmes` for an exact-normalized or fuzzy title match. Confidence is `"exact"` /
+`"fuzzy"` / `"none"`, distinct from `verifyInstitution`'s `"exact"` / `"high"` / `"none"` (a
+narrower use case: confirming a typed/autocompleted institution name or registration number is
+real wants a boolean-ish high-confidence answer, not a ranked list).
 
 **Data model note:** `SaqaQualification.framework` (HEQSF/OQSF/GFETQSF/SFAP/SFNA) is required here
 even though EduVerify's own product is HEQSF-only — this API's other consumers need the full NQF

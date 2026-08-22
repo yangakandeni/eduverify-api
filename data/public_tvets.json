@@ -1,0 +1,402 @@
+[
+  {
+    "name": "Buffalo City TVET College",
+    "abbreviation": "BCC",
+    "address": "Corner Lukin Road & King Street, Southernwood, East London",
+    "province": "Eastern Cape",
+    "website": "www.bccollege.co.za",
+    "faculties_and_programmes": []
+  },
+  {
+    "name": "East Cape Midlands TVET College",
+    "abbreviation": "ECM",
+    "address": "Corner Cuyler and Durban Street, Kariega (Uitenhage)",
+    "province": "Eastern Cape",
+    "website": "www.emcol.co.za",
+    "faculties_and_programmes": []
+  },
+  {
+    "name": "Ikhala TVET College",
+    "abbreviation": "IKH",
+    "address": "Zone D, Gwadana Drive, Ezibeleni, Queenstown",
+    "province": "Eastern Cape",
+    "website": "www.ikhala.edu.za",
+    "faculties_and_programmes": []
+  },
+  {
+    "name": "Ingwe TVET College",
+    "abbreviation": "ING",
+    "address": "Badibanise Village, Mount Frere",
+    "province": "Eastern Cape",
+    "website": "www.ingwecollege.edu.za",
+    "faculties_and_programmes": []
+  },
+  {
+    "name": "King Hintsa TVET College",
+    "abbreviation": "KHC",
+    "address": "218 Mthatha Road (N2), Butterworth",
+    "province": "Eastern Cape",
+    "website": "www.khc.edu.za",
+    "faculties_and_programmes": []
+  },
+  {
+    "name": "King Sabata Dalindyebo TVET College",
+    "abbreviation": "KSD",
+    "address": "R61 Queenstown Road, Cicira Village, Mthatha",
+    "province": "Eastern Cape",
+    "website": "www.ksdcollege.edu.za",
+    "faculties_and_programmes": []
+  },
+  {
+    "name": "Lovedale TVET College",
+    "abbreviation": "LOV",
+    "address": "1 Amatola Row, King William's Town",
+    "province": "Eastern Cape",
+    "website": "www.lovedale.edu.za",
+    "faculties_and_programmes": []
+  },
+  {
+    "name": "Port Elizabeth TVET College",
+    "abbreviation": "PE",
+    "address": "139 Russell Road, Gqeberha Central",
+    "province": "Eastern Cape",
+    "website": "www.pecollege.edu.za",
+    "faculties_and_programmes": []
+  },
+  {
+    "name": "Boland TVET College",
+    "abbreviation": "BOL",
+    "address": "85 Bird Street, Stellenbosch",
+    "province": "Western Cape",
+    "website": "www.bolandcollege.com",
+    "faculties_and_programmes": []
+  },
+  {
+    "name": "College of Cape Town",
+    "abbreviation": "CCT",
+    "address": "334 Albert Road, Salt River, Cape Town",
+    "province": "Western Cape",
+    "website": "www.cct.edu.za",
+    "faculties_and_programmes": []
+  },
+  {
+    "name": "False Bay TVET College",
+    "abbreviation": "FB",
+    "address": "131 Main Road, Muizenberg, Cape Town",
+    "province": "Western Cape",
+    "website": "www.falsebaycollege.co.za",
+    "faculties_and_programmes": []
+  },
+  {
+    "name": "Northlink TVET College",
+    "abbreviation": "NL",
+    "address": "80 Voortrekker Road, Bellville, Cape Town",
+    "province": "Western Cape",
+    "website": "www.northlink.co.za",
+    "faculties_and_programmes": []
+  },
+  {
+    "name": "South Cape TVET College",
+    "abbreviation": "SC",
+    "address": "46 Hibernia Street, George",
+    "province": "Western Cape",
+    "website": "www.sccollege.co.za",
+    "faculties_and_programmes": []
+  },
+  {
+    "name": "West Coast TVET College",
+    "abbreviation": "WCC",
+    "address": "2 Loedolf Street, Malmesbury",
+    "province": "Western Cape",
+    "website": "www.westcoastcollege.co.za",
+    "faculties_and_programmes": []
+  },
+  {
+    "name": "Northern Cape Rural TVET College",
+    "abbreviation": "NCR",
+    "address": "1 Steve Naude Street, Blydeville, Upington",
+    "province": "Northern Cape",
+    "website": "www.ncrtvet.com",
+    "faculties_and_programmes": []
+  },
+  {
+    "name": "Northern Cape Urban TVET College",
+    "abbreviation": "NCU",
+    "address": "37-41 Long Street, Kimberley",
+    "province": "Northern Cape",
+    "website": "www.ncutvet.edu.za",
+    "faculties_and_programmes": []
+  },
+  {
+    "name": "Flavius Mareka TVET College",
+    "abbreviation": "FM",
+    "address": "Corner Hertzog Road & Fraser Street, Sasolburg",
+    "province": "Free State",
+    "website": "www.flaviusmareka.net",
+    "faculties_and_programmes": []
+  },
+  {
+    "name": "Goldfields TVET College",
+    "abbreviation": "GF",
+    "address": "Flamingo Park, Welkom",
+    "province": "Free State",
+    "website": "www.goldfieldstvet.edu.za",
+    "faculties_and_programmes": []
+  },
+  {
+    "name": "Maluti TVET College",
+    "abbreviation": "MAL",
+    "address": "Bethlehem",
+    "province": "Free State",
+    "website": "www.malutitvet.co.za",
+    "faculties_and_programmes": []
+  },
+  {
+    "name": "Motheo TVET College",
+    "abbreviation": "MOT",
+    "address": "Central Bloemfontein",
+    "province": "Free State",
+    "website": "www.motheotvet.edu.za",
+    "faculties_and_programmes": []
+  },
+  {
+    "name": "Coastal KZN TVET College",
+    "abbreviation": "CKZN",
+    "address": "KwaMakhutha, Amanzimtoti",
+    "province": "KwaZulu-Natal",
+    "website": "www.coastalkzn.co.za",
+    "faculties_and_programmes": []
+  },
+  {
+    "name": "Elangeni TVET College",
+    "abbreviation": "ELA",
+    "address": "Pinetown",
+    "province": "KwaZulu-Natal",
+    "website": "www.elangeni.edu.za",
+    "faculties_and_programmes": []
+  },
+  {
+    "name": "Esayidi TVET College",
+    "abbreviation": "ESA",
+    "address": "Port Shepstone",
+    "province": "KwaZulu-Natal",
+    "website": "www.esayiditvet.co.za",
+    "faculties_and_programmes": []
+  },
+  {
+    "name": "Majuba TVET College",
+    "abbreviation": "MAJ",
+    "address": "Newcastle",
+    "province": "KwaZulu-Natal",
+    "website": "www.majuba.edu.za",
+    "faculties_and_programmes": []
+  },
+  {
+    "name": "Mnambithi TVET College",
+    "abbreviation": "MNA",
+    "address": "Ladysmith",
+    "province": "KwaZulu-Natal",
+    "website": "www.mnambithicollege.co.za",
+    "faculties_and_programmes": []
+  },
+  {
+    "name": "Mthashana TVET College",
+    "abbreviation": "MTH",
+    "address": "Vryheid",
+    "province": "KwaZulu-Natal",
+    "website": "www.mthashanacollege.co.za",
+    "faculties_and_programmes": []
+  },
+  {
+    "name": "Thekwini TVET College",
+    "abbreviation": "THE",
+    "address": "Asherville, Durban",
+    "province": "KwaZulu-Natal",
+    "website": "www.thekwini.edu.za",
+    "faculties_and_programmes": []
+  },
+  {
+    "name": "Umfolozi TVET College",
+    "abbreviation": "UMF",
+    "address": "Arboretum, Richards Bay",
+    "province": "KwaZulu-Natal",
+    "website": "www.umfolozicollege.co.za",
+    "faculties_and_programmes": []
+  },
+  {
+    "name": "Umgungundlovu TVET College",
+    "abbreviation": "UMG",
+    "address": "Pietermaritzburg",
+    "province": "KwaZulu-Natal",
+    "website": "www.utvet.co.za",
+    "faculties_and_programmes": []
+  },
+  {
+    "name": "Orbit TVET College",
+    "abbreviation": "ORB",
+    "address": "Rustenburg",
+    "province": "North West",
+    "website": "www.orbitcollege.co.za",
+    "faculties_and_programmes": []
+  },
+  {
+    "name": "Taletso TVET College",
+    "abbreviation": "TAL",
+    "address": "Montshiwa, Mahikeng",
+    "province": "North West",
+    "website": "www.taletso.edu.za",
+    "faculties_and_programmes": []
+  },
+  {
+    "name": "Vuselela TVET College",
+    "abbreviation": "VUS",
+    "address": "Klerksdorp",
+    "province": "North West",
+    "website": "www.vuselelacollege.co.za",
+    "faculties_and_programmes": []
+  },
+  {
+    "name": "Central Johannesburg TVET College",
+    "abbreviation": "CJC",
+    "address": "Parktown, Johannesburg",
+    "province": "Gauteng",
+    "website": "www.cjc.edu.za",
+    "faculties_and_programmes": []
+  },
+  {
+    "name": "Ekurhuleni East TVET College",
+    "abbreviation": "EEC",
+    "address": "Kwa-Thema, Springs",
+    "province": "Gauteng",
+    "website": "www.eec.edu.za",
+    "faculties_and_programmes": []
+  },
+  {
+    "name": "Ekurhuleni West TVET College",
+    "abbreviation": "EWC",
+    "address": "Corner Driehoek & Sol Roads, Germiston",
+    "province": "Gauteng",
+    "website": "www.ewc.edu.za",
+    "faculties_and_programmes": []
+  },
+  {
+    "name": "Sedibeng TVET College",
+    "abbreviation": "SED",
+    "address": "37 Voortrekker Street, Vereeniging",
+    "province": "Gauteng",
+    "website": "www.sedcol.co.za",
+    "faculties_and_programmes": []
+  },
+  {
+    "name": "South West Gauteng TVET College",
+    "abbreviation": "SWG",
+    "address": "1822A Molele Street, Molapo, Soweto",
+    "province": "Gauteng",
+    "website": "www.swgc.co.za",
+    "faculties_and_programmes": []
+  },
+  {
+    "name": "Tshwane North TVET College",
+    "abbreviation": "TN",
+    "address": "Corner Kgosi Mampuru & Pretorius Streets, Arcadia, Pretoria",
+    "province": "Gauteng",
+    "website": "www.tnc.edu.za",
+    "faculties_and_programmes": []
+  },
+  {
+    "name": "Tshwane South TVET College",
+    "abbreviation": "TS",
+    "address": "85 Frances Baard Street, Pretoria",
+    "province": "Gauteng",
+    "website": "www.tsc.edu.za",
+    "faculties_and_programmes": []
+  },
+  {
+    "name": "Western College for TVET",
+    "abbreviation": "WCT",
+    "address": "42 Johnstone Street, Randfontein",
+    "province": "Gauteng",
+    "website": "www.westcol.co.za",
+    "faculties_and_programmes": []
+  },
+  {
+    "name": "Ehlanzeni TVET College",
+    "abbreviation": "EHL",
+    "address": "29 Bell Street, Nelspruit",
+    "province": "Mpumalanga",
+    "website": "www.ehlanzenicollege.co.za",
+    "faculties_and_programmes": []
+  },
+  {
+    "name": "Gert Sibande TVET College",
+    "abbreviation": "GS",
+    "address": "18A Beyers Naude Street, Standerton",
+    "province": "Mpumalanga",
+    "website": "www.gscollege.edu.za",
+    "faculties_and_programmes": []
+  },
+  {
+    "name": "Nkangala TVET College",
+    "abbreviation": "NKA",
+    "address": "Corner Frans & Susanna Streets, Witbank (eMalahleni)",
+    "province": "Mpumalanga",
+    "website": "www.ntc.edu.za",
+    "faculties_and_programmes": []
+  },
+  {
+    "name": "Capricorn TVET College",
+    "abbreviation": "CAP",
+    "address": "16 Market Street, Polokwane",
+    "province": "Limpopo",
+    "website": "www.capricorncollege.edu.za",
+    "faculties_and_programmes": []
+  },
+  {
+    "name": "Lephalale TVET College",
+    "abbreviation": "LEP",
+    "address": "Corner Nelson Mandela & Ngwako Ramatlhodi Streets, Onverwacht, Lephalale",
+    "province": "Limpopo",
+    "website": "www.leptvetcol.edu.za",
+    "faculties_and_programmes": []
+  },
+  {
+    "name": "Letaba TVET College",
+    "abbreviation": "LET",
+    "address": "1 Claude Wheatley Street, Tzaneen",
+    "province": "Limpopo",
+    "website": "www.letcol.co.za",
+    "faculties_and_programmes": []
+  },
+  {
+    "name": "Mopani South East TVET College",
+    "abbreviation": "MSE",
+    "address": "Corner Combretum & Haarlem Streets, Phalaborwa",
+    "province": "Limpopo",
+    "website": "www.mopanicollege.edu.za",
+    "faculties_and_programmes": []
+  },
+  {
+    "name": "Sekhukhune TVET College",
+    "abbreviation": "SEK",
+    "address": "Stand No 676, Motetema, Groblersdal",
+    "province": "Limpopo",
+    "website": "www.sekhukhunetvet.edu.za",
+    "faculties_and_programmes": []
+  },
+  {
+    "name": "Vhembe TVET College",
+    "abbreviation": "VHE",
+    "address": "Stand No. 203 Unit A, Sibasa, Thohoyandou",
+    "province": "Limpopo",
+    "website": "www.vhembecollege.edu.za",
+    "faculties_and_programmes": []
+  },
+  {
+    "name": "Waterberg TVET College",
+    "abbreviation": "WAT",
+    "address": "Mokopane",
+    "province": "Limpopo",
+    "website": "www.waterbergcollege.co.za",
+    "faculties_and_programmes": []
+  }
+]
