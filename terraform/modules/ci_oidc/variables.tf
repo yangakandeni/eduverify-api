@@ -9,8 +9,13 @@ variable "github_repo" {
 }
 
 variable "github_deploy_refs" {
-  description = "Git refs (e.g. \"refs/heads/main\") whose GitHub Actions runs may assume this role. A workflow_dispatch run's OIDC token `sub` claim is repo:<owner>/<repo>:ref:<ref>, matched against these."
+  description = "Git refs (e.g. \"refs/heads/main\") whose GitHub Actions runs may assume this role. Only used to build the ref-based `sub` claim pattern (repo:<owner>/<repo>:ref:<ref>) — irrelevant for jobs that set `environment:`, see github_environment."
   type        = list(string)
+}
+
+variable "github_environment" {
+  description = "GitHub Environment name (e.g. \"staging\") that the deploying job runs under. When a job specifies `environment:`, GitHub's OIDC token `sub` claim is repo:<owner>/<repo>:environment:<name> INSTEAD OF the ref-based form above — cd-staging.yml/cd-production.yml both set `environment:`, so this must be set for the role to ever be assumable."
+  type        = string
 }
 
 variable "tf_state_bucket_name" {
