@@ -1,28 +1,36 @@
 # eduverify-api
 
-Standalone verification API for South African institutions and qualifications. Owns ingest
-(`ingestion/`) → parse → write → serve (`src/`) end to end. EduVerify's own web app is this
-API's first client, reading through it rather than a bundled seed or a directly-read table.
+Verification API for South African institutions and qualifications. Performs an ingest
+(`ingestion/`) → parse → write → serve (`src/`) end to end.
 
-`src/lib/` is forked (not shared via package) from `eduverify/web/lib/` — pure, dependency-free
-TS with no AWS calls except `dynamodb.ts`, which talks to the real institutions table
-read-only.
+```mermaid
+flowchart LR
+    A[DHET / SAQA registers] --> B["ingestion/ (Lambda)\nscrape → parse → write"]
+    B --> C[(DynamoDB\ninstitutions table)]
+    C --> D["src/ (Lambda)\nrouter.ts"]
+    D --> E[API Gateway]
+    E --> F[EduVerify web app +\nexternal developers]
+```
 
-`src/handlers/` (institutions, qualifications, verify, health), `src/matching/verifyQualification.ts`
-(the fuzzy qualification matcher devs use to verify a claimed qualification on a form), `src/tiers.ts`/
-`src/keyTiers.ts` (tier gating), and
-`src/router.ts` (the single-Lambda internal router behind API Gateway's proxy integration) are
-all implemented and unit-tested against mocked DynamoDB calls — see `src/router.ts`'s route
+- `src/handlers/` : institutions, qualifications, verify, health.
+- `src/matching/verifyQualification.ts` : the fuzzy qualification matcher
+- `src/tiers.ts`/ `src/keyTiers.ts` : tier gating
+- `src/router.ts` : the single Lambda internal router behind API Gateway's proxy integration
+
+These are all implemented and unit tested against mocked DynamoDB calls — see `src/router.ts`'s route
 table for the full `/v1/*` surface. All tests mock `../lib/dynamodb`'s exported functions rather
 than running against DynamoDB Local.
 
-`ingestion/` (Python) is a canonical copy of the `eduverify` repo's `parser/` — the DHET
-register scraper, plus `seed_dynamodb.py` for bulk-loading. It's deployed as a container-image
-Lambda (`ingestion/Dockerfile`), provisioned by `terraform/ingestion/`. `eduverify`'s own
-`parser/` and `terraform/main.tf` still exist too, deliberately — production there still reads
-its own DynamoDB table directly until that cutover happens, so that copy stays live until it's
-formally decommissioned. See `ingestion/CLAUDE.md` for details, including the account/state
-topology this migration adopted rather than recreating.
+```mermaid
+flowchart TD
+    A["router.ts\nroute dispatch"] --> B["src/handlers/*\nHTTP request/response"]
+    B --> C["verifyQualification.ts / src/lib/*\npure matching logic"]
+    C --> D["src/lib/dynamodb.ts\nonly module that talks to AWS"]
+    D --> E[(DynamoDB table, read-only)]
+```
+
+`ingestion/` (Python) — the DHET register scraper - is deployed as a container image Lambda (`ingestion/Dockerfile`),
+provisioned by `terraform/ingestion/`.
 
 ## Commands
 
@@ -36,9 +44,8 @@ npm run docs          # serve Swagger UI at http://localhost:4000
 
 ## Local development (DynamoDB Local + curl/Postman)
 
-No AWS infrastructure exists for this repo yet (see above), but the full `/v1/*` surface can
-still be exercised locally against [DynamoDB Local](https://hub.docker.com/r/amazon/dynamodb-local)
-seeded from the (gitignored, local-only) `data/*.json` fixtures — the DHET private register plus
+The full `/v1/*` surface can be exercised locally against [DynamoDB Local](https://hub.docker.com/r/amazon/dynamodb-local),
+seeded from the (gitignored, local only) `data/*.json` fixtures, the DHET private register plus
 public university/TVET lists, in the same shape `parser/dynamo_item.py` bakes into the real
 table.
 
@@ -76,6 +83,15 @@ request header exactly like the deployed API Gateway route would (see `src/tiers
 
 ## API docs
 
+```mermaid
+flowchart LR
+    A["src/docs/routeSpec.ts\nroute metadata"] --> C[generateOpenApi.ts]
+    B["TS interfaces\ntypes.ts, handlers/*, router.ts"] --> C
+    C --> D[docs/openapi.yaml]
+    D --> E["docs/index.html\nSwagger UI"]
+    E --> F["GET /v1/docs\nserved by the API itself"]
+```
+
 `docs/openapi.yaml` is a **generated** OpenAPI 3 spec for the full `/v1/*` surface — don't hand-
 edit it. `src/docs/routeSpec.ts` is the source of truth for route metadata (method, path,
 summary, query params, auth); request/response *schemas* are generated straight from the actual
@@ -95,10 +111,11 @@ plain static file server at http://localhost:4000) still works too, e.g. for vie
 before any API instance is running at all — a `file://` page can't `fetch` its sibling
 `openapi.yaml` directly, which is what that script's server is for.
 
-The spec's `servers` block is a placeholder API Gateway host — once `terraform apply` has
-actually run, fill in the real `apiId` from `terraform output invoke_url` to make "Try it out"
-hit the real deployment; until then, the docs still fully describe the contract, they just have
-nothing live to call beyond your own `npm run dev`.
+The spec's `servers` block already points at the real deployed API Gateway host (the `apiId`
+from `terraform output invoke_url`, filled in in `generateOpenApi.ts` once `terraform apply` was
+run), with `stage` selectable between `staging` and `production` — so "Try it out" hits the real
+deployment directly, not just `npm run dev`. If the API is ever redeployed to a new API Gateway
+(new `apiId`), update that hardcoded host in `generateOpenApi.ts` and regenerate.
 
 ## Why fork instead of share a package
 
@@ -115,7 +132,7 @@ known slugs against real institution names as the only automated guard against t
 
 - `search.ts`'s `searchLocal(query, filters, limit)` (which read a bundled local JSON seed)
   became `searchInstitutions(institutions, query, filters, limit)` — a pure ranking function
-  over a caller-supplied candidate list, since this repo has no bundled seed; the caller
-  (a future handler) supplies candidates from DynamoDB.
+  over a caller-supplied candidate list, since this repo has no bundled seed; callers in
+  `src/handlers/` supply candidates fetched from DynamoDB.
 - `types.ts`'s `SaqaQualification` gained a required `framework` field (HEQSF/OQSF/GFETQSF/
   SFAP/SFNA) — see the corresponding parser change in `eduverify`.
