@@ -17,6 +17,17 @@ resource "aws_iam_openid_connect_provider" "github_actions" {
   thumbprint_list = [data.tls_certificate.github_actions.certificates[0].sha1_fingerprint]
 
   tags = var.tags
+
+  # GitHub's OIDC endpoint sits behind a CDN that can present a different leaf certificate
+  # on different requests, so the tls_certificate data source above recomputes a different
+  # thumbprint on nearly every plan even though nothing meaningful changed — AWS doesn't
+  # even validate this thumbprint for providers (like GitHub's) that support JWKS discovery.
+  # Without this, every apply tries to call iam:UpdateOpenIDConnectProviderThumbprint, which
+  # the CI role deliberately doesn't have (see RefreshOwnCiInfra below on why its self-mgmt
+  # permissions stay read-only) and shouldn't need for a no-op update.
+  lifecycle {
+    ignore_changes = [thumbprint_list]
+  }
 }
 
 data "aws_iam_policy_document" "github_actions_assume_role" {
@@ -39,15 +50,27 @@ data "aws_iam_policy_document" "github_actions_assume_role" {
     # OIDC subject-claim customization (immutable-ID vs classic) — matching both patterns
     # keeps this working whichever is in effect. See eduverify/terraform/modules/ci_oidc's
     # identical condition for the confirmed claim shapes.
+    #
+    # Also includes the environment-scoped shape (repo:<owner>/<repo>:environment:<name>):
+    # when a job sets `environment:` (as cd-staging.yml/cd-production.yml both do), GitHub
+    # issues that shape INSTEAD OF the ref-based one above, even on a workflow_dispatch run
+    # from the expected branch — omitting it is what caused AssumeRoleWithWebIdentity to be
+    # denied for every real deploy run despite the ref-based patterns looking correct.
     condition {
       test     = "StringLike"
       variable = "token.actions.githubusercontent.com:sub"
-      values = flatten([
-        for ref in var.github_deploy_refs : [
-          "repo:${var.github_repo}:ref:${ref}",
-          "repo:${split("/", var.github_repo)[0]}@*/${split("/", var.github_repo)[1]}@*:ref:${ref}",
+      values = concat(
+        flatten([
+          for ref in var.github_deploy_refs : [
+            "repo:${var.github_repo}:ref:${ref}",
+            "repo:${split("/", var.github_repo)[0]}@*/${split("/", var.github_repo)[1]}@*:ref:${ref}",
+          ]
+        ]),
+        [
+          "repo:${var.github_repo}:environment:${var.github_environment}",
+          "repo:${split("/", var.github_repo)[0]}@*/${split("/", var.github_repo)[1]}@*:environment:${var.github_environment}",
         ]
-      ])
+      )
     }
   }
 }
