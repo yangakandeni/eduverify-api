@@ -17,6 +17,17 @@ resource "aws_iam_openid_connect_provider" "github_actions" {
   thumbprint_list = [data.tls_certificate.github_actions.certificates[0].sha1_fingerprint]
 
   tags = var.tags
+
+  # GitHub's OIDC endpoint sits behind a CDN that can present a different leaf certificate
+  # on different requests, so the tls_certificate data source above recomputes a different
+  # thumbprint on nearly every plan even though nothing meaningful changed — AWS doesn't
+  # even validate this thumbprint for providers (like GitHub's) that support JWKS discovery.
+  # Without this, every apply tries to call iam:UpdateOpenIDConnectProviderThumbprint, which
+  # the CI role deliberately doesn't have (see RefreshOwnCiInfra below on why its self-mgmt
+  # permissions stay read-only) and shouldn't need for a no-op update.
+  lifecycle {
+    ignore_changes = [thumbprint_list]
+  }
 }
 
 data "aws_iam_policy_document" "github_actions_assume_role" {
