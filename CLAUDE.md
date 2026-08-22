@@ -13,8 +13,8 @@ Every new feature, change, or bug fix must be built test-driven (TDD): write or 
 
 ## What this is
 
-Standalone verification API for South African institutions and qualifications, now owning
-ingest → parse → write (`ingestion/`) as well as serving (`src/`). EduVerify's own web app is
+Standalone verification API for South African institutions and qualifications,
+Owns ingest → parse → write (`ingestion/`) as well as serving (`src/`). EduVerify's own web app is
 this API's first client, but the API is released for external developers too — the target use
 case is form-field autocomplete/verification (an institution or qualification picker, similar in
 spirit to what getAddress.io does for postal addresses), not a bundled EduVerify feature. Other

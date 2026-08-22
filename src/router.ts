@@ -48,9 +48,9 @@ function institutionIdFromPath(event: APIGatewayProxyEvent): string {
   return decodeURIComponent(segments[segments.length - 1] ?? "");
 }
 
-/** Single-Lambda internal router (per Part 2's infra decision) — one entry point behind API
- * Gateway's proxy integration. Ordered so exact-match routes (search, list, verify) are checked
- * before the GET /v1/institutions/{id} catch-all, which would otherwise swallow them too. */
+/** Single Lambda internal - one entry point behind API Gateway's proxy integration.
+ * Ordered so exact-match routes (search, list, verify) are checked before
+ * the GET /v1/institutions/{id} catch-all, which would otherwise swallow them too. */
 export async function handler(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
   const method = event.httpMethod;
   const path = event.path;
