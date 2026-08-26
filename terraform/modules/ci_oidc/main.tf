@@ -104,6 +104,9 @@ locals {
   self_oidc_provider_arn = "arn:aws:iam::${local.account_id}:oidc-provider/token.actions.githubusercontent.com"
   self_role_arn          = "arn:aws:iam::${local.account_id}:role/${var.project_name}-github-actions-deploy"
   self_policy_arn        = "arn:aws:iam::${local.account_id}:policy/${var.project_name}-github-actions-deploy-policy"
+
+  apigw_cloudwatch_role_arn  = "arn:aws:iam::${local.account_id}:role/${var.project_name}-apigw-cloudwatch-role"
+  apigw_access_log_group_arn = "arn:aws:logs:*:${local.account_id}:log-group:/aws/apigateway/${var.project_name}"
 }
 
 data "aws_iam_policy_document" "deploy_permissions" {
@@ -179,6 +182,43 @@ data "aws_iam_policy_document" "deploy_permissions" {
     resources = ["arn:aws:logs:*:${local.account_id}:log-group:/aws/lambda/${var.project_name}"]
   }
 
+  statement {
+    sid    = "ManageApiGatewayAccessLogGroup"
+    effect = "Allow"
+    actions = [
+      "logs:CreateLogGroup", "logs:DeleteLogGroup",
+      "logs:PutRetentionPolicy", "logs:TagResource", "logs:ListTagsForResource",
+    ]
+    resources = [local.apigw_access_log_group_arn]
+  }
+
+  # API Gateway's account-level cloudwatch_role_arn is a singleton per account/region
+  # (see modules/api_gateway/main.tf's aws_iam_role.apigw_cloudwatch comment), so this role
+  # is managed by exact ARN like ManageServingLambdaExecRole above, not the project prefix.
+  statement {
+    sid    = "ManageApigwCloudwatchRole"
+    effect = "Allow"
+    actions = [
+      "iam:CreateRole", "iam:DeleteRole", "iam:GetRole", "iam:UpdateRole", "iam:TagRole",
+      "iam:ListRoleTags", "iam:AttachRolePolicy", "iam:DetachRolePolicy",
+      "iam:ListAttachedRolePolicies", "iam:ListRolePolicies",
+    ]
+    resources = [local.apigw_cloudwatch_role_arn]
+  }
+
+  statement {
+    sid       = "PassApigwCloudwatchRole"
+    effect    = "Allow"
+    actions   = ["iam:PassRole"]
+    resources = [local.apigw_cloudwatch_role_arn]
+
+    condition {
+      test     = "StringEquals"
+      variable = "iam:PassedToService"
+      values   = ["apigateway.amazonaws.com"]
+    }
+  }
+
   # logs:DescribeLogGroups doesn't support resource-level permissions (it's an account-wide
   # list operation) — IAM silently denies it if the statement's Resource is anything but "*",
   # regardless of whether the action is also listed in a scoped statement above.
@@ -209,6 +249,7 @@ data "aws_iam_policy_document" "deploy_permissions" {
       "arn:aws:apigateway:*::/apikeys",
       "arn:aws:apigateway:*::/apikeys/*",
       "arn:aws:apigateway:*::/tags/*",
+      "arn:aws:apigateway:*::/account",
     ]
   }
 

@@ -15,10 +15,17 @@ export interface ErrorResponse {
   error: string;
 }
 
+/** `*` rather than a specific origin: this API has no cookie/session auth (callers
+ * authenticate via the `x-api-key` header, sent explicitly by client code), so there's no
+ * credentialed-request case that a wildcard origin would expose. */
+const CORS_HEADERS = {
+  "Access-Control-Allow-Origin": "*",
+};
+
 function json(statusCode: number, body: unknown): APIGatewayProxyResult {
   return {
     statusCode,
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...CORS_HEADERS },
     body: JSON.stringify(body),
   };
 }
@@ -26,7 +33,7 @@ function json(statusCode: number, body: unknown): APIGatewayProxyResult {
 function text(statusCode: number, contentType: string, body: string): APIGatewayProxyResult {
   return {
     statusCode,
-    headers: { "Content-Type": contentType },
+    headers: { "Content-Type": contentType, ...CORS_HEADERS },
     body,
   };
 }
@@ -42,6 +49,30 @@ function parseBody(event: APIGatewayProxyEvent): unknown {
 
 class BadRequestError extends Error {}
 
+interface AccessLogEntry {
+  method: string;
+  path: string;
+  statusCode: number;
+  durationMs: number;
+  apiKeyId: string | null;
+  tier: string;
+}
+
+/** 5xx -> error, 4xx -> warn, everything else -> log (info) — so a log aggregator's
+ * severity filter reflects request outcome instead of every access line reading as "info".
+ * Logs `apiKeyId` (API Gateway's non-secret key identifier), never the raw `identity.apiKey`
+ * value — that field carries the caller's actual credential and must not end up in logs. */
+function logAccess(entry: AccessLogEntry): void {
+  const payload = JSON.stringify(entry);
+  if (entry.statusCode >= 500) {
+    console.error(payload);
+  } else if (entry.statusCode >= 400) {
+    console.warn(payload);
+  } else {
+    console.log(payload);
+  }
+}
+
 function institutionIdFromPath(event: APIGatewayProxyEvent): string {
   if (event.pathParameters?.id) return event.pathParameters.id;
   const segments = event.path.split("/").filter(Boolean);
@@ -54,7 +85,41 @@ function institutionIdFromPath(event: APIGatewayProxyEvent): string {
 export async function handler(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
   const method = event.httpMethod;
   const path = event.path;
+  const start = Date.now();
+
+  const result = await route(event, method, path);
+
+  const identity = event.requestContext?.identity;
+  const tierConfig = resolveTier(identity?.apiKey ?? undefined, KEY_TIERS);
+  logAccess({
+    method,
+    path,
+    statusCode: result.statusCode,
+    durationMs: Date.now() - start,
+    apiKeyId: identity?.apiKeyId ?? null,
+    tier: tierConfig.tier,
+  });
+  return result;
+}
+
+async function route(
+  event: APIGatewayProxyEvent,
+  method: string,
+  path: string,
+): Promise<APIGatewayProxyResult> {
   const query = event.queryStringParameters ?? {};
+
+  if (method === "OPTIONS") {
+    return {
+      statusCode: 204,
+      headers: {
+        ...CORS_HEADERS,
+        "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type,X-Api-Key,Accept",
+      },
+      body: "",
+    };
+  }
 
   try {
     if (method === "GET" && path === "/v1/health") {
@@ -90,6 +155,7 @@ export async function handler(event: APIGatewayProxyEvent): Promise<APIGatewayPr
         province: query.province,
         institutionType: query.type as InstitutionType | undefined,
         status: query.status,
+        fields: query.fields === "full" ? "full" : undefined,
       });
       return json(200, result);
     }
@@ -128,6 +194,7 @@ export async function handler(event: APIGatewayProxyEvent): Promise<APIGatewayPr
     if (error instanceof Error && /batch size/i.test(error.message)) {
       return json(400, { error: error.message });
     }
+    console.error(error);
     return json(500, { error: "Internal error" });
   }
 }

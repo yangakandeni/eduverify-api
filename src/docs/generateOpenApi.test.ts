@@ -46,6 +46,22 @@ describe("buildOpenApiDocument", () => {
     }
   });
 
+  it("lists a local dev server first, so Swagger UI's Try it out defaults to localhost instead of the deployed staging API", () => {
+    expect(document.servers[0].url).toMatch(/^http:\/\/localhost/);
+    expect(document.servers.some((server) => /amazonaws\.com/.test(server.url as string))).toBe(true);
+  });
+
+  it("defaults the local server's port variable to 3000 when none is given", () => {
+    const variables = document.servers[0].variables as { port: { default: string } };
+    expect(variables.port.default).toBe("3000");
+  });
+
+  it("uses the given port for the local server's default, so it matches a dev server started with PORT set", () => {
+    const withCustomPort = buildOpenApiDocument(ROUTE_SPEC, "4000");
+    const variables = withCustomPort.servers[0].variables as { port: { default: string } };
+    expect(variables.port.default).toBe("4000");
+  });
+
   it("matches the checked-in docs/openapi.yaml exactly (run `npm run docs:generate` if this fails)", () => {
     const generated = toYaml(document);
     const checkedIn = readFileSync(DOCS_YAML_PATH, "utf-8");

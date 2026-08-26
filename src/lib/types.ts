@@ -53,6 +53,15 @@ export interface InstitutionRecord extends Institution {
   id: string;
 }
 
+/** `InstitutionRecord` without the potentially large nested `faculties_and_programmes` detail —
+ * what a browse/list card needs (a count and the faculty names) without paying to transfer and
+ * serialize every SAQA-matched programme row for every institution on the page. Produced by
+ * `toInstitutionSummary()` in facultiesAndProgrammes.ts. */
+export interface InstitutionSummaryRecord extends Omit<InstitutionRecord, "faculties_and_programmes"> {
+  qualificationCount: number;
+  facultyLabels: string[];
+}
+
 export interface SearchFilters {
   province?: string;
   institutionType?: InstitutionType;

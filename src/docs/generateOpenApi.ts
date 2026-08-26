@@ -115,7 +115,7 @@ function collectReferencedTypeNames(routes: RouteSpec[]): string[] {
   return [...typeNames];
 }
 
-export function buildOpenApiDocument(routes: RouteSpec[]): OpenApiDocument {
+export function buildOpenApiDocument(routes: RouteSpec[], port: string = "3000"): OpenApiDocument {
   const schemas = buildComponentSchemas(collectReferencedTypeNames(routes));
 
   const paths: Record<string, Record<string, unknown>> = {};
@@ -147,6 +147,13 @@ export function buildOpenApiDocument(routes: RouteSpec[]): OpenApiDocument {
       version: "0.0.1",
     },
     servers: [
+      {
+        url: "http://localhost:{port}",
+        description: "Local dev server (npm run dev)",
+        variables: {
+          port: { default: port },
+        },
+      },
       {
         url: "https://iw1e0x36ma.execute-api.af-south-1.amazonaws.com/{stage}",
         description: "API Gateway ID",

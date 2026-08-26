@@ -28,6 +28,27 @@ describe("getDocsHtml", () => {
     expect(overrideScriptIndex).toBeLessThan(presetScriptIndex);
     expect(html).toMatch(/prefers-color-scheme:\s*dark/);
   });
+
+  it("sets a favicon from the EduVerify logo graphic", async () => {
+    // Inlined as a base64 data URI rather than a separate static file: this page's production
+    // path (src/handlers/docs.ts) is only ever served through getDocsHtml()/getOpenApiYaml() —
+    // there's no route for arbitrary static assets in the deployed Lambda, so any sibling image
+    // file under docs/ would 404 there even though the local `npm run docs` static server can
+    // find it.
+    const html = await getDocsHtml();
+
+    expect(html).toMatch(/<link\s+rel="icon"\s+type="image\/png"\s+href="data:image\/png;base64,[A-Za-z0-9+/=]+"\s*\/>/);
+  });
+
+  it("renders the EduVerify logo graphic and wordmark in a branded header above the Swagger UI", async () => {
+    const html = await getDocsHtml();
+    const headerIndex = html.indexOf('id="eduverify-brand"');
+    const swaggerDivIndex = html.indexOf('id="swagger-ui"');
+
+    expect(headerIndex).toBeGreaterThan(-1);
+    expect(headerIndex).toBeLessThan(swaggerDivIndex);
+    expect(html).toMatch(/<img[^>]*src="data:image\/png;base64,[A-Za-z0-9+/=]+"[^>]*alt="EduVerify"/);
+  });
 });
 
 describe("getOpenApiYaml", () => {

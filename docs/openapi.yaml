@@ -6,6 +6,11 @@ info:
     `x-api-key` header except `/v1/health`, `/v1/docs`, and `/v1/openapi.yaml`.
   version: 0.0.1
 servers:
+  - url: http://localhost:{port}
+    description: Local dev server (npm run dev)
+    variables:
+      port:
+        default: '3000'
   - url: https://iw1e0x36ma.execute-api.af-south-1.amazonaws.com/{stage}
     description: API Gateway ID
     variables:
@@ -200,6 +205,16 @@ paths:
             type: string
             default: REGISTERED
           example: REGISTERED
+        - name: fields
+          in: query
+          description: >-
+            "full" returns complete InstitutionRecords (including faculties_and_programmes) instead
+            of the default InstitutionSummaryRecord shape (qualificationCount and facultyLabels in
+            place of the nested detail). Any other value is treated as the default.
+          schema:
+            type: string
+            default: summary
+          example: full
       responses:
         '200':
           description: One page of institutions
@@ -576,9 +591,13 @@ components:
       type: object
       properties:
         institutions:
-          type: array
-          items:
-            $ref: '#/components/schemas/InstitutionRecord'
+          anyOf:
+            - type: array
+              items:
+                $ref: '#/components/schemas/InstitutionSummaryRecord'
+            - type: array
+              items:
+                $ref: '#/components/schemas/InstitutionRecord'
         page:
           type: number
         pageSize:
@@ -591,6 +610,70 @@ components:
         - pageSize
         - total
       additionalProperties: false
+    InstitutionSummaryRecord:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        tradingName:
+          type:
+            - string
+            - 'null'
+        abbreviation:
+          type:
+            - string
+            - 'null'
+          description: Common short form, e.g. "UCT" — search-only, never a valid getDisplayName result.
+        registration_number:
+          type:
+            - string
+            - 'null'
+        status:
+          type:
+            - string
+            - 'null'
+        address:
+          type: string
+        province:
+          type:
+            - string
+            - 'null'
+        contacts:
+          $ref: '#/components/schemas/Contacts'
+        cancellation_reason:
+          type:
+            - string
+            - 'null'
+        institutionType:
+          $ref: '#/components/schemas/InstitutionType'
+        isFeatured:
+          type: boolean
+        isSponsored:
+          type: boolean
+        isRecentlyAdded:
+          type: boolean
+        qualificationCount:
+          type: number
+        facultyLabels:
+          type: array
+          items:
+            type: string
+      required:
+        - address
+        - contacts
+        - facultyLabels
+        - id
+        - institutionType
+        - name
+        - qualificationCount
+      additionalProperties: false
+      description: >-
+        `InstitutionRecord` without the potentially large nested `faculties_and_programmes` detail —
+        what a browse/list card needs (a count and the faculty names) without paying to transfer and
+        serialize every SAQA-matched programme row for every institution on the page. Produced by
+        `toInstitutionSummary()` in facultiesAndProgrammes.ts.
     VerifyInstitutionRequest:
       type: object
       properties:
