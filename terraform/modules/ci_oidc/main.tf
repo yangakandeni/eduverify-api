@@ -106,7 +106,7 @@ locals {
   self_policy_arn        = "arn:aws:iam::${local.account_id}:policy/${var.project_name}-github-actions-deploy-policy"
 
   apigw_cloudwatch_role_arn  = "arn:aws:iam::${local.account_id}:role/${var.project_name}-apigw-cloudwatch-role"
-  apigw_access_log_group_arn = "arn:aws:logs:*:${local.account_id}:log-group:/aws/apigateway/${var.project_name}"
+  apigw_access_log_group_arn = "arn:aws:logs:*:${local.account_id}:log-group:/aws/apigateway/${var.project_name}:*"
 }
 
 data "aws_iam_policy_document" "deploy_permissions" {
@@ -179,7 +179,7 @@ data "aws_iam_policy_document" "deploy_permissions" {
       "logs:CreateLogGroup", "logs:DeleteLogGroup",
       "logs:PutRetentionPolicy", "logs:TagResource", "logs:ListTagsForResource",
     ]
-    resources = ["arn:aws:logs:*:${local.account_id}:log-group:/aws/lambda/${var.project_name}"]
+    resources = ["arn:aws:logs:*:${local.account_id}:log-group:/aws/lambda/${var.project_name}:*"]
   }
 
   statement {
