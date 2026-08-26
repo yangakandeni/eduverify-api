@@ -163,4 +163,76 @@ resource "aws_api_gateway_stage" "stage" {
   deployment_id = aws_api_gateway_deployment.api.id
   stage_name    = var.stage_name
   tags          = var.tags
+
+  access_log_settings {
+    destination_arn = aws_cloudwatch_log_group.access_logs.arn
+    format = jsonencode({
+      requestId         = "$context.requestId"
+      ip                = "$context.identity.sourceIp"
+      apiKeyId          = "$context.identity.apiKeyId"
+      requestTime       = "$context.requestTime"
+      httpMethod        = "$context.httpMethod"
+      resourcePath      = "$context.resourcePath"
+      status            = "$context.status"
+      protocol          = "$context.protocol"
+      responseLength    = "$context.responseLength"
+      integrationStatus = "$context.integration.status"
+      integrationError  = "$context.integration.error"
+      errorMessage      = "$context.error.message"
+      errorResponseType = "$context.error.responseType"
+    })
+  }
+
+  depends_on = [aws_api_gateway_account.this]
+}
+
+# Account-level CloudWatch role, required before API Gateway will write ANY access or
+# execution logs — a singleton per AWS account/region. Nothing else in this account manages
+# it yet (eduverify's own Terraform has no aws_api_gateway resources at all), so this is safe
+# to own here.
+resource "aws_iam_role" "apigw_cloudwatch" {
+  name = "${var.api_name}-apigw-cloudwatch-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Action    = "sts:AssumeRole"
+      Effect    = "Allow"
+      Principal = { Service = "apigateway.amazonaws.com" }
+    }]
+  })
+
+  tags = var.tags
+}
+
+resource "aws_iam_role_policy_attachment" "apigw_cloudwatch" {
+  role       = aws_iam_role.apigw_cloudwatch.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
+}
+
+resource "aws_api_gateway_account" "this" {
+  cloudwatch_role_arn = aws_iam_role.apigw_cloudwatch.arn
+}
+
+resource "aws_cloudwatch_log_group" "access_logs" {
+  name              = "/aws/apigateway/${var.api_name}"
+  retention_in_days = var.log_retention_days
+  tags              = var.tags
+}
+
+# INFO-level execution logging + metrics for every method on the stage. data_trace_enabled
+# stays off by default (var.enable_data_trace) since it captures full request/response
+# payloads, including header values like X-Api-Key, in CloudWatch Logs.
+resource "aws_api_gateway_method_settings" "all" {
+  rest_api_id = aws_api_gateway_rest_api.api.id
+  stage_name  = aws_api_gateway_stage.stage.stage_name
+  method_path = "*/*"
+
+  settings {
+    metrics_enabled    = true
+    logging_level      = "INFO"
+    data_trace_enabled = var.enable_data_trace
+  }
+
+  depends_on = [aws_api_gateway_account.this]
 }
