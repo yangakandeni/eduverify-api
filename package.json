@@ -10,7 +10,7 @@
     "build": "esbuild src/router.ts --bundle --platform=node --target=node20 --format=cjs --outfile=dist/index.cjs",
     "docs": "node scripts/serve-docs.mjs",
     "docs:generate": "tsx scripts/generate-openapi.ts",
-    "dynamodb:local": "docker run --rm -p 8000:8000 amazon/dynamodb-local",
+    "dynamodb:local": "docker run --rm -p ${PORT:-8000}:${PORT:-8000} amazon/dynamodb-local -jar DynamoDBLocal.jar -sharedDb -port ${PORT:-8000}",
     "seed:local": "tsx scripts/seed-local-dynamodb.ts",
     "dev": "tsx scripts/dev-server.ts"
   },

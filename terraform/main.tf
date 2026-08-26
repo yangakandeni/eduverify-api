@@ -76,6 +76,8 @@ module "api_gateway" {
   stage_name           = var.stage_name
   lambda_invoke_arn    = module.lambda_api.invoke_arn
   lambda_function_name = module.lambda_api.function_name
+  log_retention_days   = var.log_retention_days
+  enable_data_trace    = var.enable_api_gateway_data_trace
   tags                 = local.common_tags
 }
 

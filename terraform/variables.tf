@@ -61,6 +61,12 @@ variable "log_retention_days" {
   default = 14
 }
 
+variable "enable_api_gateway_data_trace" {
+  description = "Enable full request/response payload tracing on the API Gateway stage, on top of the always-on access logs. Off by default — captures header values (e.g. X-Api-Key) in CloudWatch Logs, so only flip on temporarily in an environment's tfvars while actively debugging, then revert."
+  type        = bool
+  default     = false
+}
+
 variable "api_key_tiers_json" {
   description = "JSON object of apiKey -> tier, e.g. {\"<generated-key-value>\": \"internal\"} — consumed by src/keyTiers.ts at runtime. Deliberately NOT derived from module.usage_plans' output: that would create a dependency cycle (this Lambda's env var would depend on the usage plan, which depends on the API Gateway, which depends on this Lambda's invoke ARN). Bootstrap sequence instead: (1) apply once with this left as \"{}\" to create the API key, (2) read the real value via `terraform output -json api_key_values`, (3) set TF_VAR_api_key_tiers_json (or a gitignored secrets tfvars) and apply again. Never commit real key values."
   type        = string

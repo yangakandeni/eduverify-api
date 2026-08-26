@@ -1,4 +1,4 @@
-import type { FacultyProgrammes, InstitutionRecord, SaqaQualification } from "./types";
+import type { FacultyProgrammes, InstitutionRecord, InstitutionSummaryRecord, SaqaQualification } from "./types";
 
 /** Groups already-matched SAQA rows by subfield ("faculty"), producing the shape baked into
  * institutions.json / public_universities.json / public_tvets.json. Deterministic ordering
@@ -39,4 +39,16 @@ export function getFacultyLabels(
     .filter((faculty) => faculty.programmes.length > 0)
     .map((faculty) => faculty.faculty)
     .sort((a, b) => a.localeCompare(b));
+}
+
+/** Drops the nested `faculties_and_programmes` detail in favor of a count and the faculty
+ * names — see InstitutionSummaryRecord in types.ts for why (list/browse responses don't need
+ * every SAQA-matched programme row, just enough to render a card). */
+export function toInstitutionSummary(institution: InstitutionRecord): InstitutionSummaryRecord {
+  const { faculties_and_programmes, ...rest } = institution;
+  return {
+    ...rest,
+    qualificationCount: getAllProgrammes(institution).length,
+    facultyLabels: getFacultyLabels(institution),
+  };
 }

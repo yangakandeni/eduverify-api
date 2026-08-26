@@ -150,6 +150,21 @@ describe("listInstitutions", () => {
     expect(result.total).toBe(30);
   });
 
+  it("returns a summary shape — no faculties_and_programmes, with a qualification count and faculty labels", async () => {
+    const institution = makeInstitution({
+      id: "i0",
+      faculties_and_programmes: [
+        { faculty: "Business", programmes: [{ qualId: 1, title: "Diploma", nqfLevelRaw: "6", subfield: "Business", originator: "x", framework: "HEQSF" }] },
+      ],
+    });
+    queryAllByStatus.mockResolvedValueOnce([institution]);
+
+    const result = await listInstitutions();
+
+    expect(result.institutions[0]).not.toHaveProperty("faculties_and_programmes");
+    expect(result.institutions[0]).toMatchObject({ id: "i0", qualificationCount: 1, facultyLabels: ["Business"] });
+  });
+
   it("returns the second page correctly", async () => {
     const institutions = Array.from({ length: 30 }, (_, i) => makeInstitution({ id: `i${i}`, name: `Institution ${i}` }));
     queryAllByStatus.mockResolvedValueOnce(institutions);
@@ -202,5 +217,21 @@ describe("listInstitutions", () => {
     const result = await listInstitutions({ status: "ALL", pageSize: 1000 });
 
     expect(result.institutions).toHaveLength(1);
+  });
+
+  it("fields=full returns full InstitutionRecords (with faculties_and_programmes) instead of the summary shape", async () => {
+    const institution = makeInstitution({
+      id: "i0",
+      faculties_and_programmes: [
+        { faculty: "Business", programmes: [{ qualId: 1, title: "Diploma", nqfLevelRaw: "6", subfield: "Business", originator: "x", framework: "HEQSF" }] },
+      ],
+    });
+    queryAllByStatus.mockResolvedValueOnce([institution]);
+
+    const result = await listInstitutions({ fields: "full" });
+
+    expect(result.institutions[0]).toEqual(institution);
+    expect(result.institutions[0]).not.toHaveProperty("qualificationCount");
+    expect(result.institutions[0]).not.toHaveProperty("facultyLabels");
   });
 });

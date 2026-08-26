@@ -93,6 +93,22 @@ describe("router: GET /v1/stats", () => {
   });
 });
 
+describe("router: unhandled errors", () => {
+  it("logs the underlying error before returning a generic 500", async () => {
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+    const failure = new Error("DynamoDB endpoint unreachable");
+    getStats.mockRejectedValueOnce(failure);
+
+    const result = await handler(makeEvent({ path: "/v1/stats" }));
+
+    expect(result.statusCode).toBe(500);
+    expect(JSON.parse(result.body)).toEqual({ error: "Internal error" });
+    expect(consoleError).toHaveBeenCalledWith(failure);
+
+    consoleError.mockRestore();
+  });
+});
+
 describe("router: GET /v1/docs", () => {
   it("returns the Swagger UI page as HTML", async () => {
     getDocsHtml.mockResolvedValueOnce("<html>docs</html>");
@@ -187,6 +203,26 @@ describe("router: GET /v1/institutions/list", () => {
       expect.objectContaining({ page: 2, pageSize: 10 }),
     );
   });
+
+  it("passes fields=full through to listInstitutions", async () => {
+    listInstitutions.mockResolvedValueOnce({ institutions: [], page: 1, pageSize: 25, total: 0 });
+
+    await handler(
+      makeEvent({ path: "/v1/institutions/list", queryStringParameters: { fields: "full" } }),
+    );
+
+    expect(listInstitutions).toHaveBeenCalledWith(expect.objectContaining({ fields: "full" }));
+  });
+
+  it("treats any value other than \"full\" as the default summary shape", async () => {
+    listInstitutions.mockResolvedValueOnce({ institutions: [], page: 1, pageSize: 25, total: 0 });
+
+    await handler(
+      makeEvent({ path: "/v1/institutions/list", queryStringParameters: { fields: "bogus" } }),
+    );
+
+    expect(listInstitutions).toHaveBeenCalledWith(expect.objectContaining({ fields: undefined }));
+  });
 });
 
 describe("router: POST /v1/institutions/verify", () => {
@@ -267,5 +303,129 @@ describe("router: unknown route", () => {
   it("returns 404 for a path that matches nothing", async () => {
     const result = await handler(makeEvent({ path: "/v1/nonsense" }));
     expect(result.statusCode).toBe(404);
+  });
+});
+
+describe("router: CORS", () => {
+  it("adds Access-Control-Allow-Origin to a successful response", async () => {
+    checkHealth.mockResolvedValueOnce({ status: "ok", dynamodb: true });
+
+    const result = await handler(makeEvent());
+
+    expect(result.headers?.["Access-Control-Allow-Origin"]).toBe("*");
+  });
+
+  it("adds Access-Control-Allow-Origin to an error response", async () => {
+    const result = await handler(makeEvent({ path: "/v1/nonsense" }));
+
+    expect(result.statusCode).toBe(404);
+    expect(result.headers?.["Access-Control-Allow-Origin"]).toBe("*");
+  });
+
+  it("answers an OPTIONS preflight request without invoking any route handler", async () => {
+    const result = await handler(
+      makeEvent({ httpMethod: "OPTIONS", path: "/v1/institutions/list" }),
+    );
+
+    expect(result.statusCode).toBe(204);
+    expect(result.headers?.["Access-Control-Allow-Origin"]).toBe("*");
+    expect(result.headers?.["Access-Control-Allow-Methods"]).toBe("GET,POST,OPTIONS");
+    expect(result.headers?.["Access-Control-Allow-Headers"]).toBe("Content-Type,X-Api-Key,Accept");
+    expect(listInstitutions).not.toHaveBeenCalled();
+  });
+});
+
+describe("router: access logging", () => {
+  it("logs method, path, status code, and duration for a successful request", async () => {
+    const consoleLog = vi.spyOn(console, "log").mockImplementation(() => {});
+    checkHealth.mockResolvedValueOnce({ status: "ok", dynamodb: true });
+
+    await handler(makeEvent());
+
+    expect(consoleLog).toHaveBeenCalledTimes(1);
+    const logged = JSON.parse(consoleLog.mock.calls[0][0] as string);
+    expect(logged).toMatchObject({ method: "GET", path: "/v1/health", statusCode: 200 });
+    expect(typeof logged.durationMs).toBe("number");
+
+    consoleLog.mockRestore();
+  });
+
+  it("logs a 5xx access entry via console.error, not console.log", async () => {
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+    const consoleLog = vi.spyOn(console, "log").mockImplementation(() => {});
+    const failure = new Error("boom");
+    getStats.mockRejectedValueOnce(failure);
+
+    await handler(makeEvent({ path: "/v1/stats" }));
+
+    expect(consoleLog).not.toHaveBeenCalled();
+    const accessLogCall = consoleError.mock.calls.find(
+      (call) => typeof call[0] === "string" && call[0].includes('"statusCode":500'),
+    );
+    expect(accessLogCall).toBeDefined();
+    const logged = JSON.parse(accessLogCall![0] as string);
+    expect(logged).toMatchObject({ method: "GET", path: "/v1/stats", statusCode: 500 });
+
+    consoleError.mockRestore();
+    consoleLog.mockRestore();
+  });
+
+  it("logs a 4xx access entry via console.warn, not console.log", async () => {
+    const consoleWarn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const consoleLog = vi.spyOn(console, "log").mockImplementation(() => {});
+
+    await handler(makeEvent({ path: "/v1/nonsense" }));
+
+    expect(consoleLog).not.toHaveBeenCalled();
+    expect(consoleWarn).toHaveBeenCalledTimes(1);
+    const logged = JSON.parse(consoleWarn.mock.calls[0][0] as string);
+    expect(logged).toMatchObject({ method: "GET", path: "/v1/nonsense", statusCode: 404 });
+
+    consoleWarn.mockRestore();
+    consoleLog.mockRestore();
+  });
+
+  it("logs a 2xx access entry via console.log", async () => {
+    const consoleLog = vi.spyOn(console, "log").mockImplementation(() => {});
+    checkHealth.mockResolvedValueOnce({ status: "ok", dynamodb: true });
+
+    await handler(makeEvent());
+
+    expect(consoleLog).toHaveBeenCalledTimes(1);
+    const logged = JSON.parse(consoleLog.mock.calls[0][0] as string);
+    expect(logged.statusCode).toBe(200);
+
+    consoleLog.mockRestore();
+  });
+
+  it("includes the caller's api key id and resolved tier, never the raw api key value", async () => {
+    const consoleLog = vi.spyOn(console, "log").mockImplementation(() => {});
+    checkHealth.mockResolvedValueOnce({ status: "ok", dynamodb: true });
+
+    await handler(
+      makeEvent({
+        requestContext: {
+          identity: { apiKey: "dev-key", apiKeyId: "key-id-123" },
+        } as unknown as APIGatewayProxyEvent["requestContext"],
+      }),
+    );
+
+    const logged = JSON.parse(consoleLog.mock.calls[0][0] as string);
+    expect(logged).toMatchObject({ apiKeyId: "key-id-123", tier: "developer" });
+    expect(JSON.stringify(logged)).not.toContain("dev-key");
+
+    consoleLog.mockRestore();
+  });
+
+  it("resolves to the free tier and a null api key id when no api key is presented", async () => {
+    const consoleLog = vi.spyOn(console, "log").mockImplementation(() => {});
+    checkHealth.mockResolvedValueOnce({ status: "ok", dynamodb: true });
+
+    await handler(makeEvent());
+
+    const logged = JSON.parse(consoleLog.mock.calls[0][0] as string);
+    expect(logged).toMatchObject({ apiKeyId: null, tier: "free" });
+
+    consoleLog.mockRestore();
   });
 });
