@@ -93,6 +93,22 @@ describe("router: GET /v1/stats", () => {
   });
 });
 
+describe("router: unhandled errors", () => {
+  it("logs the underlying error before returning a generic 500", async () => {
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+    const failure = new Error("DynamoDB endpoint unreachable");
+    getStats.mockRejectedValueOnce(failure);
+
+    const result = await handler(makeEvent({ path: "/v1/stats" }));
+
+    expect(result.statusCode).toBe(500);
+    expect(JSON.parse(result.body)).toEqual({ error: "Internal error" });
+    expect(consoleError).toHaveBeenCalledWith(failure);
+
+    consoleError.mockRestore();
+  });
+});
+
 describe("router: GET /v1/docs", () => {
   it("returns the Swagger UI page as HTML", async () => {
     getDocsHtml.mockResolvedValueOnce("<html>docs</html>");
@@ -267,5 +283,35 @@ describe("router: unknown route", () => {
   it("returns 404 for a path that matches nothing", async () => {
     const result = await handler(makeEvent({ path: "/v1/nonsense" }));
     expect(result.statusCode).toBe(404);
+  });
+});
+
+describe("router: access logging", () => {
+  it("logs method, path, status code, and duration for a successful request", async () => {
+    const consoleLog = vi.spyOn(console, "log").mockImplementation(() => {});
+    checkHealth.mockResolvedValueOnce({ status: "ok", dynamodb: true });
+
+    await handler(makeEvent());
+
+    expect(consoleLog).toHaveBeenCalledTimes(1);
+    const logged = JSON.parse(consoleLog.mock.calls[0][0] as string);
+    expect(logged).toMatchObject({ method: "GET", path: "/v1/health", statusCode: 200 });
+    expect(typeof logged.durationMs).toBe("number");
+
+    consoleLog.mockRestore();
+  });
+
+  it("still logs the final status code when a handler throws", async () => {
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+    const consoleLog = vi.spyOn(console, "log").mockImplementation(() => {});
+    getStats.mockRejectedValueOnce(new Error("boom"));
+
+    await handler(makeEvent({ path: "/v1/stats" }));
+
+    const logged = JSON.parse(consoleLog.mock.calls[0][0] as string);
+    expect(logged).toMatchObject({ method: "GET", path: "/v1/stats", statusCode: 500 });
+
+    consoleError.mockRestore();
+    consoleLog.mockRestore();
   });
 });

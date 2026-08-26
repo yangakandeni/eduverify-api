@@ -21,7 +21,7 @@ import type { Contacts, FacultyProgrammes, InstitutionType, RawInstitution } fro
  * eduverify's own scripts/seed_dynamodb.py does against the real table. */
 
 const DATA_DIR = fileURLToPath(new URL("../data", import.meta.url));
-const ENDPOINT = process.env.DYNAMODB_ENDPOINT ?? "http://localhost:8000";
+const ENDPOINT = process.env.DYNAMODB_ENDPOINT ?? `http://localhost:${process.env.PORT ?? 8000}`;
 const TABLE_NAME = process.env.EDUVERIFY_TABLE_NAME ?? "eduverify-institutions";
 const REGION = process.env.AWS_REGION ?? "af-south-1";
 const BATCH_SIZE = 25; // DynamoDB's own BatchWriteItem-per-call limit.

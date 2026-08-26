@@ -6,6 +6,11 @@ info:
     `x-api-key` header except `/v1/health`, `/v1/docs`, and `/v1/openapi.yaml`.
   version: 0.0.1
 servers:
+  - url: http://localhost:{port}
+    description: Local dev server (npm run dev)
+    variables:
+      port:
+        default: '3000'
   - url: https://iw1e0x36ma.execute-api.af-south-1.amazonaws.com/{stage}
     description: API Gateway ID
     variables:

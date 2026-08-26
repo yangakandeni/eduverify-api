@@ -54,6 +54,19 @@ function institutionIdFromPath(event: APIGatewayProxyEvent): string {
 export async function handler(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
   const method = event.httpMethod;
   const path = event.path;
+  const start = Date.now();
+
+  const result = await route(event, method, path);
+
+  console.log(JSON.stringify({ method, path, statusCode: result.statusCode, durationMs: Date.now() - start }));
+  return result;
+}
+
+async function route(
+  event: APIGatewayProxyEvent,
+  method: string,
+  path: string,
+): Promise<APIGatewayProxyResult> {
   const query = event.queryStringParameters ?? {};
 
   try {
@@ -128,6 +141,7 @@ export async function handler(event: APIGatewayProxyEvent): Promise<APIGatewayPr
     if (error instanceof Error && /batch size/i.test(error.message)) {
       return json(400, { error: error.message });
     }
+    console.error(error);
     return json(500, { error: "Internal error" });
   }
 }
