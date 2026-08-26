@@ -20,6 +20,10 @@ case is form-field autocomplete/verification (an institution or qualification pi
 spirit to what getAddress.io does for postal addresses), not a bundled EduVerify feature. Other
 consumers need non-HEQSF frameworks EduVerify's own product doesn't.
 
+**Not yet released for public consumption** (as of 2026-08-26) — that's the target audience above,
+not the current state. Until it's officially released, breaking changes to response shapes/schemas
+are fine to ship without versioning or opt-in flags.
+
 The serving side (`src/`, `terraform/{main.tf,modules/{iam_api,lambda_api,api_gateway,
 usage_plans}}`) reads the institutions DynamoDB table read-only; all its tests mock
 `../lib/dynamodb`'s exported functions rather than running against DynamoDB Local.

@@ -1,6 +1,7 @@
 import { STATUS_PARTITIONS, getInstitutionByPK, queryAllByStatus } from "../lib/dynamodb";
+import { toInstitutionSummary } from "../lib/facultiesAndProgrammes";
 import { searchInstitutions } from "../lib/search";
-import type { InstitutionRecord, SearchFilters } from "../lib/types";
+import type { InstitutionRecord, InstitutionSummaryRecord, SearchFilters } from "../lib/types";
 
 export function dedupeById(institutions: InstitutionRecord[]): InstitutionRecord[] {
   const seen = new Map<string, InstitutionRecord>();
@@ -61,7 +62,7 @@ export interface ListParams {
 }
 
 export interface ListResult {
-  institutions: InstitutionRecord[];
+  institutions: InstitutionSummaryRecord[];
   page: number;
   pageSize: number;
   total: number;
@@ -74,7 +75,10 @@ export interface ListResult {
  * `status=ALL` scans every partition instead (EduVerify's own homepage needs literally every
  * institution regardless of status, the same "no permanent local fallback" cutover as search —
  * see searchInstitutionsHandler); the default single-partition behavior is unchanged for every
- * other caller. */
+ * other caller. Returns `InstitutionSummaryRecord`s rather than full records — a browse card
+ * doesn't need every SAQA-matched programme row for every institution on the page, just a
+ * qualification count and faculty labels (see toInstitutionSummary); fetch a single institution
+ * by id for the full faculties_and_programmes detail. */
 export async function listInstitutions(params: ListParams = {}): Promise<ListResult> {
   const page = params.page ?? 1;
   const pageSize = params.pageSize ?? 25;
@@ -92,7 +96,7 @@ export async function listInstitutions(params: ListParams = {}): Promise<ListRes
 
   const start = (page - 1) * pageSize;
   return {
-    institutions: filtered.slice(start, start + pageSize),
+    institutions: filtered.slice(start, start + pageSize).map(toInstitutionSummary),
     page,
     pageSize,
     total: filtered.length,
