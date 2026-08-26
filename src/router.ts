@@ -15,10 +15,17 @@ export interface ErrorResponse {
   error: string;
 }
 
+/** `*` rather than a specific origin: this API has no cookie/session auth (callers
+ * authenticate via the `x-api-key` header, sent explicitly by client code), so there's no
+ * credentialed-request case that a wildcard origin would expose. */
+const CORS_HEADERS = {
+  "Access-Control-Allow-Origin": "*",
+};
+
 function json(statusCode: number, body: unknown): APIGatewayProxyResult {
   return {
     statusCode,
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...CORS_HEADERS },
     body: JSON.stringify(body),
   };
 }
@@ -26,7 +33,7 @@ function json(statusCode: number, body: unknown): APIGatewayProxyResult {
 function text(statusCode: number, contentType: string, body: string): APIGatewayProxyResult {
   return {
     statusCode,
-    headers: { "Content-Type": contentType },
+    headers: { "Content-Type": contentType, ...CORS_HEADERS },
     body,
   };
 }
@@ -101,6 +108,18 @@ async function route(
   path: string,
 ): Promise<APIGatewayProxyResult> {
   const query = event.queryStringParameters ?? {};
+
+  if (method === "OPTIONS") {
+    return {
+      statusCode: 204,
+      headers: {
+        ...CORS_HEADERS,
+        "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type,X-Api-Key,Accept",
+      },
+      body: "",
+    };
+  }
 
   try {
     if (method === "GET" && path === "/v1/health") {

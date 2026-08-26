@@ -306,6 +306,35 @@ describe("router: unknown route", () => {
   });
 });
 
+describe("router: CORS", () => {
+  it("adds Access-Control-Allow-Origin to a successful response", async () => {
+    checkHealth.mockResolvedValueOnce({ status: "ok", dynamodb: true });
+
+    const result = await handler(makeEvent());
+
+    expect(result.headers?.["Access-Control-Allow-Origin"]).toBe("*");
+  });
+
+  it("adds Access-Control-Allow-Origin to an error response", async () => {
+    const result = await handler(makeEvent({ path: "/v1/nonsense" }));
+
+    expect(result.statusCode).toBe(404);
+    expect(result.headers?.["Access-Control-Allow-Origin"]).toBe("*");
+  });
+
+  it("answers an OPTIONS preflight request without invoking any route handler", async () => {
+    const result = await handler(
+      makeEvent({ httpMethod: "OPTIONS", path: "/v1/institutions/list" }),
+    );
+
+    expect(result.statusCode).toBe(204);
+    expect(result.headers?.["Access-Control-Allow-Origin"]).toBe("*");
+    expect(result.headers?.["Access-Control-Allow-Methods"]).toBe("GET,POST,OPTIONS");
+    expect(result.headers?.["Access-Control-Allow-Headers"]).toBe("Content-Type,X-Api-Key,Accept");
+    expect(listInstitutions).not.toHaveBeenCalled();
+  });
+});
+
 describe("router: access logging", () => {
   it("logs method, path, status code, and duration for a successful request", async () => {
     const consoleLog = vi.spyOn(console, "log").mockImplementation(() => {});
