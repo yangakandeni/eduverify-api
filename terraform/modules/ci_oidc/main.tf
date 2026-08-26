@@ -249,6 +249,7 @@ data "aws_iam_policy_document" "deploy_permissions" {
       "arn:aws:apigateway:*::/apikeys",
       "arn:aws:apigateway:*::/apikeys/*",
       "arn:aws:apigateway:*::/tags/*",
+      "arn:aws:apigateway:*::/account",
     ]
   }
 
