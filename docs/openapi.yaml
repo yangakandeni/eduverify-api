@@ -205,6 +205,16 @@ paths:
             type: string
             default: REGISTERED
           example: REGISTERED
+        - name: fields
+          in: query
+          description: >-
+            "full" returns complete InstitutionRecords (including faculties_and_programmes) instead
+            of the default InstitutionSummaryRecord shape (qualificationCount and facultyLabels in
+            place of the nested detail). Any other value is treated as the default.
+          schema:
+            type: string
+            default: summary
+          example: full
       responses:
         '200':
           description: One page of institutions
@@ -581,9 +591,13 @@ components:
       type: object
       properties:
         institutions:
-          type: array
-          items:
-            $ref: '#/components/schemas/InstitutionSummaryRecord'
+          anyOf:
+            - type: array
+              items:
+                $ref: '#/components/schemas/InstitutionSummaryRecord'
+            - type: array
+              items:
+                $ref: '#/components/schemas/InstitutionRecord'
         page:
           type: number
         pageSize:

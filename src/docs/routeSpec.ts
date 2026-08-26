@@ -171,6 +171,15 @@ export const ROUTE_SPEC: RouteSpec[] = [
         schema: { type: "string", default: "REGISTERED" },
         example: "REGISTERED",
       },
+      {
+        name: "fields",
+        description:
+          "\"full\" returns complete InstitutionRecords (including faculties_and_programmes) " +
+          "instead of the default InstitutionSummaryRecord shape (qualificationCount and " +
+          "facultyLabels in place of the nested detail). Any other value is treated as the default.",
+        schema: { type: "string", default: "summary" },
+        example: "full",
+      },
     ],
     responses: [
       { status: 200, description: "One page of institutions", type: "ListResult" },

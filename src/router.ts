@@ -42,6 +42,30 @@ function parseBody(event: APIGatewayProxyEvent): unknown {
 
 class BadRequestError extends Error {}
 
+interface AccessLogEntry {
+  method: string;
+  path: string;
+  statusCode: number;
+  durationMs: number;
+  apiKeyId: string | null;
+  tier: string;
+}
+
+/** 5xx -> error, 4xx -> warn, everything else -> log (info) — so a log aggregator's
+ * severity filter reflects request outcome instead of every access line reading as "info".
+ * Logs `apiKeyId` (API Gateway's non-secret key identifier), never the raw `identity.apiKey`
+ * value — that field carries the caller's actual credential and must not end up in logs. */
+function logAccess(entry: AccessLogEntry): void {
+  const payload = JSON.stringify(entry);
+  if (entry.statusCode >= 500) {
+    console.error(payload);
+  } else if (entry.statusCode >= 400) {
+    console.warn(payload);
+  } else {
+    console.log(payload);
+  }
+}
+
 function institutionIdFromPath(event: APIGatewayProxyEvent): string {
   if (event.pathParameters?.id) return event.pathParameters.id;
   const segments = event.path.split("/").filter(Boolean);
@@ -58,7 +82,16 @@ export async function handler(event: APIGatewayProxyEvent): Promise<APIGatewayPr
 
   const result = await route(event, method, path);
 
-  console.log(JSON.stringify({ method, path, statusCode: result.statusCode, durationMs: Date.now() - start }));
+  const identity = event.requestContext?.identity;
+  const tierConfig = resolveTier(identity?.apiKey ?? undefined, KEY_TIERS);
+  logAccess({
+    method,
+    path,
+    statusCode: result.statusCode,
+    durationMs: Date.now() - start,
+    apiKeyId: identity?.apiKeyId ?? null,
+    tier: tierConfig.tier,
+  });
   return result;
 }
 
@@ -103,6 +136,7 @@ async function route(
         province: query.province,
         institutionType: query.type as InstitutionType | undefined,
         status: query.status,
+        fields: query.fields === "full" ? "full" : undefined,
       });
       return json(200, result);
     }

@@ -218,4 +218,20 @@ describe("listInstitutions", () => {
 
     expect(result.institutions).toHaveLength(1);
   });
+
+  it("fields=full returns full InstitutionRecords (with faculties_and_programmes) instead of the summary shape", async () => {
+    const institution = makeInstitution({
+      id: "i0",
+      faculties_and_programmes: [
+        { faculty: "Business", programmes: [{ qualId: 1, title: "Diploma", nqfLevelRaw: "6", subfield: "Business", originator: "x", framework: "HEQSF" }] },
+      ],
+    });
+    queryAllByStatus.mockResolvedValueOnce([institution]);
+
+    const result = await listInstitutions({ fields: "full" });
+
+    expect(result.institutions[0]).toEqual(institution);
+    expect(result.institutions[0]).not.toHaveProperty("qualificationCount");
+    expect(result.institutions[0]).not.toHaveProperty("facultyLabels");
+  });
 });
