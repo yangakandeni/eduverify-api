@@ -462,28 +462,23 @@ components:
         name:
           type: string
         tradingName:
-          type:
-            - string
-            - 'null'
+          type: string
+          nullable: true
         abbreviation:
-          type:
-            - string
-            - 'null'
+          type: string
+          nullable: true
           description: Common short form, e.g. "UCT" — search-only, never a valid getDisplayName result.
         registration_number:
-          type:
-            - string
-            - 'null'
+          type: string
+          nullable: true
         status:
-          type:
-            - string
-            - 'null'
+          type: string
+          nullable: true
         address:
           type: string
         province:
-          type:
-            - string
-            - 'null'
+          type: string
+          nullable: true
         contacts:
           $ref: '#/components/schemas/Contacts'
         faculties_and_programmes:
@@ -491,9 +486,8 @@ components:
           items:
             $ref: '#/components/schemas/FacultyProgrammes'
         cancellation_reason:
-          type:
-            - string
-            - 'null'
+          type: string
+          nullable: true
         institutionType:
           $ref: '#/components/schemas/InstitutionType'
         isFeatured:
@@ -524,9 +518,8 @@ components:
           items:
             type: string
         website:
-          type:
-            - string
-            - 'null'
+          type: string
+          nullable: true
       required:
         - email
         - phone
@@ -618,34 +611,28 @@ components:
         name:
           type: string
         tradingName:
-          type:
-            - string
-            - 'null'
+          type: string
+          nullable: true
         abbreviation:
-          type:
-            - string
-            - 'null'
+          type: string
+          nullable: true
           description: Common short form, e.g. "UCT" — search-only, never a valid getDisplayName result.
         registration_number:
-          type:
-            - string
-            - 'null'
+          type: string
+          nullable: true
         status:
-          type:
-            - string
-            - 'null'
+          type: string
+          nullable: true
         address:
           type: string
         province:
-          type:
-            - string
-            - 'null'
+          type: string
+          nullable: true
         contacts:
           $ref: '#/components/schemas/Contacts'
         cancellation_reason:
-          type:
-            - string
-            - 'null'
+          type: string
+          nullable: true
         institutionType:
           $ref: '#/components/schemas/InstitutionType'
         isFeatured:
