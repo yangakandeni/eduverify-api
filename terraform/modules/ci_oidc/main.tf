@@ -105,8 +105,22 @@ locals {
   self_role_arn          = "arn:aws:iam::${local.account_id}:role/${var.project_name}-github-actions-deploy"
   self_policy_arn        = "arn:aws:iam::${local.account_id}:policy/${var.project_name}-github-actions-deploy-policy"
 
-  apigw_cloudwatch_role_arn  = "arn:aws:iam::${local.account_id}:role/${var.project_name}-apigw-cloudwatch-role"
-  apigw_access_log_group_arn = "arn:aws:logs:*:${local.account_id}:log-group:/aws/apigateway/${var.project_name}"
+  apigw_cloudwatch_role_arn = "arn:aws:iam::${local.account_id}:role/${var.project_name}-apigw-cloudwatch-role"
+
+  # CloudWatch Logs is inconsistent about the trailing `:*`: ListTagsForResource's actual
+  # authorization check (confirmed via a real AccessDenied error) is against the bare log-group
+  # ARN, with no `:*`, while the `:*`-suffixed form was needed for other actions (see the prior
+  # fix commit that added it). Granting both forms covers every action in
+  # ManageServingLambdaLogGroup/ManageApiGatewayAccessLogGroup without action-by-action ARN
+  # splitting.
+  lambda_log_group_arns = [
+    "arn:aws:logs:*:${local.account_id}:log-group:/aws/lambda/${var.project_name}",
+    "arn:aws:logs:*:${local.account_id}:log-group:/aws/lambda/${var.project_name}:*",
+  ]
+  apigw_access_log_group_arns = [
+    "arn:aws:logs:*:${local.account_id}:log-group:/aws/apigateway/${var.project_name}",
+    "arn:aws:logs:*:${local.account_id}:log-group:/aws/apigateway/${var.project_name}:*",
+  ]
 }
 
 data "aws_iam_policy_document" "deploy_permissions" {
@@ -179,7 +193,7 @@ data "aws_iam_policy_document" "deploy_permissions" {
       "logs:CreateLogGroup", "logs:DeleteLogGroup",
       "logs:PutRetentionPolicy", "logs:TagResource", "logs:ListTagsForResource",
     ]
-    resources = ["arn:aws:logs:*:${local.account_id}:log-group:/aws/lambda/${var.project_name}"]
+    resources = local.lambda_log_group_arns
   }
 
   statement {
@@ -189,7 +203,7 @@ data "aws_iam_policy_document" "deploy_permissions" {
       "logs:CreateLogGroup", "logs:DeleteLogGroup",
       "logs:PutRetentionPolicy", "logs:TagResource", "logs:ListTagsForResource",
     ]
-    resources = [local.apigw_access_log_group_arn]
+    resources = local.apigw_access_log_group_arns
   }
 
   # API Gateway's account-level cloudwatch_role_arn is a singleton per account/region

@@ -4,9 +4,11 @@
 #
 # One catch-all {proxy+} resource forwards everything under /v1/* to the single serving
 # Lambda (src/router.ts does the actual path/method dispatch — matches the "one Lambda +
-# internal router" decision) and requires an API key. /v1/health is carved out as its own
-# resource specifically so it can skip the API key requirement — it's an uptime check meant
-# to be pollable without provisioning a key first.
+# internal router" decision) and requires an API key. /v1/health, /v1/docs and
+# /v1/openapi.yaml are each carved out as their own resource specifically so they can skip the
+# API key requirement — health is an uptime check meant to be pollable without provisioning a
+# key first, and the Swagger UI docs (plus the spec it fetches) need to be publicly browsable
+# so a prospective consumer can read them before they have a key to try requests with.
 #
 # CORS: browser callers (Swagger UI's "Try it out", or any JS client hosted on a different
 # origin than this API) send a preflight OPTIONS request before any GET/POST that carries the
@@ -56,6 +58,66 @@ module "health_cors" {
   source          = "../cors_options"
   rest_api_id     = aws_api_gateway_rest_api.api.id
   resource_id     = aws_api_gateway_resource.health.id
+  allowed_methods = "GET,OPTIONS"
+}
+
+resource "aws_api_gateway_resource" "docs" {
+  rest_api_id = aws_api_gateway_rest_api.api.id
+  parent_id   = aws_api_gateway_resource.v1.id
+  path_part   = "docs"
+}
+
+resource "aws_api_gateway_method" "docs_get" {
+  rest_api_id      = aws_api_gateway_rest_api.api.id
+  resource_id      = aws_api_gateway_resource.docs.id
+  http_method      = "GET"
+  authorization    = "NONE"
+  api_key_required = false
+}
+
+resource "aws_api_gateway_integration" "docs_get" {
+  rest_api_id             = aws_api_gateway_rest_api.api.id
+  resource_id             = aws_api_gateway_resource.docs.id
+  http_method             = aws_api_gateway_method.docs_get.http_method
+  integration_http_method = "POST"
+  type                    = "AWS_PROXY"
+  uri                     = var.lambda_invoke_arn
+}
+
+module "docs_cors" {
+  source          = "../cors_options"
+  rest_api_id     = aws_api_gateway_rest_api.api.id
+  resource_id     = aws_api_gateway_resource.docs.id
+  allowed_methods = "GET,OPTIONS"
+}
+
+resource "aws_api_gateway_resource" "openapi_yaml" {
+  rest_api_id = aws_api_gateway_rest_api.api.id
+  parent_id   = aws_api_gateway_resource.v1.id
+  path_part   = "openapi.yaml"
+}
+
+resource "aws_api_gateway_method" "openapi_yaml_get" {
+  rest_api_id      = aws_api_gateway_rest_api.api.id
+  resource_id      = aws_api_gateway_resource.openapi_yaml.id
+  http_method      = "GET"
+  authorization    = "NONE"
+  api_key_required = false
+}
+
+resource "aws_api_gateway_integration" "openapi_yaml_get" {
+  rest_api_id             = aws_api_gateway_rest_api.api.id
+  resource_id             = aws_api_gateway_resource.openapi_yaml.id
+  http_method             = aws_api_gateway_method.openapi_yaml_get.http_method
+  integration_http_method = "POST"
+  type                    = "AWS_PROXY"
+  uri                     = var.lambda_invoke_arn
+}
+
+module "openapi_yaml_cors" {
+  source          = "../cors_options"
+  rest_api_id     = aws_api_gateway_rest_api.api.id
+  resource_id     = aws_api_gateway_resource.openapi_yaml.id
   allowed_methods = "GET,OPTIONS"
 }
 
@@ -133,6 +195,18 @@ resource "aws_api_gateway_deployment" "api" {
       module.health_cors.method_id,
       module.health_cors.integration_id,
       module.health_cors.integration_response_id,
+      aws_api_gateway_resource.docs.id,
+      aws_api_gateway_method.docs_get.id,
+      aws_api_gateway_integration.docs_get.id,
+      module.docs_cors.method_id,
+      module.docs_cors.integration_id,
+      module.docs_cors.integration_response_id,
+      aws_api_gateway_resource.openapi_yaml.id,
+      aws_api_gateway_method.openapi_yaml_get.id,
+      aws_api_gateway_integration.openapi_yaml_get.id,
+      module.openapi_yaml_cors.method_id,
+      module.openapi_yaml_cors.integration_id,
+      module.openapi_yaml_cors.integration_response_id,
       aws_api_gateway_resource.proxy.id,
       aws_api_gateway_method.proxy_any.id,
       aws_api_gateway_integration.proxy_any.id,
@@ -150,8 +224,12 @@ resource "aws_api_gateway_deployment" "api" {
 
   depends_on = [
     aws_api_gateway_integration.health_get,
+    aws_api_gateway_integration.docs_get,
+    aws_api_gateway_integration.openapi_yaml_get,
     aws_api_gateway_integration.proxy_any,
     module.health_cors,
+    module.docs_cors,
+    module.openapi_yaml_cors,
     module.proxy_cors,
     aws_api_gateway_gateway_response.default_4xx,
     aws_api_gateway_gateway_response.default_5xx,
