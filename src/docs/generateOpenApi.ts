@@ -20,13 +20,25 @@ export interface OpenApiDocument {
 }
 
 /** Remaps every `#/definitions/X` produced by ts-json-schema-generator to the OpenAPI
- * convention `#/components/schemas/X`, recursively. */
+ * convention `#/components/schemas/X`, and downgrades JSON Schema 2020-12's array-valued `type`
+ * (e.g. `type: ["string", "null"]`, emitted for `string | null` unions) to OpenAPI 3.0's
+ * single-string `type` plus a sibling `nullable: true` — OpenAPI 3.0 validators reject an array
+ * `type`. Applied recursively. */
 function remapRefs(node: unknown): unknown {
   if (Array.isArray(node)) return node.map(remapRefs);
   if (node && typeof node === "object") {
     const result: Record<string, unknown> = {};
     for (const [key, value] of Object.entries(node as Record<string, unknown>)) {
-      result[key] = key === "$ref" && typeof value === "string" ? value.replace("#/definitions/", "#/components/schemas/") : remapRefs(value);
+      if (key === "$ref" && typeof value === "string") {
+        result[key] = value.replace("#/definitions/", "#/components/schemas/");
+      } else if (key === "type" && Array.isArray(value)) {
+        const nonNullTypes = value.filter((t) => t !== "null");
+        if (nonNullTypes.length === 1) result[key] = nonNullTypes[0];
+        else result[key] = nonNullTypes;
+        if (value.includes("null")) result.nullable = true;
+      } else {
+        result[key] = remapRefs(value);
+      }
     }
     return result;
   }
