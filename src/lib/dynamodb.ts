@@ -6,6 +6,7 @@ import type { FacultyProgrammes, InstitutionRecord } from "./types";
 const TABLE_NAME = process.env.EDUVERIFY_TABLE_NAME ?? "eduverify-institutions";
 const REGION = process.env.AWS_REGION ?? "af-south-1";
 const REQUEST_TIMEOUT_MS = 2500;
+const INSTITUTIONS_CACHE_TTL_MS = Number(process.env.EDUVERIFY_INSTITUTIONS_CACHE_TTL_MS ?? 300_000);
 
 /** Set by local dev tooling only (scripts/dev-server.ts, scripts/seed-local-dynamodb.ts) to
  * point at DynamoDB Local instead of real AWS — never set in a deployed environment. DynamoDB
@@ -141,6 +142,56 @@ export async function queryAllByStatus(status: string): Promise<InstitutionRecor
   } while (exclusiveStartKey);
 
   return items;
+}
+
+function dedupeInstitutionsById(institutions: InstitutionRecord[]): InstitutionRecord[] {
+  const seen = new Map<string, InstitutionRecord>();
+  for (const institution of institutions) {
+    if (!seen.has(institution.id)) seen.set(institution.id, institution);
+  }
+  return [...seen.values()];
+}
+
+interface InstitutionsCacheEntry {
+  expiresAt: number;
+  promise: Promise<InstitutionRecord[]>;
+}
+
+let institutionsCache: InstitutionsCacheEntry | null = null;
+
+/** Warm-container in-memory cache for the full institutions corpus (every STATUS_PARTITIONS
+ * entry, deduped by id) — the same "scan everything" fetch that searchInstitutionsHandler,
+ * listInstitutions, and getStats each used to do independently on every single request, which is
+ * what made those endpoints take up to 5s. TTL defaults to 300_000ms, overridable via
+ * EDUVERIFY_INSTITUTIONS_CACHE_TTL_MS for tests/tuning. The cache slot stores the in-flight
+ * *promise*, not just the eventually-resolved array, so two calls that land before the first
+ * fetch resolves (e.g. concurrent requests hitting the same warm container) share one fetch
+ * instead of issuing two. A rejected fetch clears the slot so the next call retries rather than
+ * replaying the same rejection for the rest of the TTL window. */
+export async function getAllInstitutionsCached(): Promise<InstitutionRecord[]> {
+  const now = Date.now();
+  if (institutionsCache && institutionsCache.expiresAt > now) {
+    return institutionsCache.promise;
+  }
+
+  const promise = Promise.all(STATUS_PARTITIONS.map((status) => queryAllByStatus(status))).then((partitions) =>
+    dedupeInstitutionsById(partitions.flat())
+  );
+
+  const entry: InstitutionsCacheEntry = { expiresAt: now + INSTITUTIONS_CACHE_TTL_MS, promise };
+  institutionsCache = entry;
+
+  promise.catch(() => {
+    if (institutionsCache === entry) institutionsCache = null;
+  });
+
+  return promise;
+}
+
+/** Test-only escape hatch: Vitest imports this module once per test file, so the module-level
+ * cache slot would otherwise leak state across test cases in the same file. */
+export function __resetInstitutionsCacheForTests(): void {
+  institutionsCache = null;
 }
 
 /** Cheap connectivity/permissions check for /v1/health — a GetItem for a key that will never

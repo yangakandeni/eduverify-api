@@ -2,23 +2,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { InstitutionRecord } from "../lib/types";
 
 const getInstitutionByPK = vi.fn();
-const queryAllByStatus = vi.fn();
-
-const MOCK_STATUS_PARTITIONS = [
-  "REGISTERED",
-  "PROVISIONALLY REGISTERED",
-  "UNKNOWN",
-  "ESTABLISHED — HIGHER EDUCATION ACT",
-  "ESTABLISHED — CONTINUING EDUCATION AND TRAINING ACT",
-  "CANCELLED",
-  "DISCONTINUED",
-  "BOGUS",
-];
+const getAllInstitutionsCached = vi.fn();
 
 vi.mock("../lib/dynamodb", () => ({
-  STATUS_PARTITIONS: MOCK_STATUS_PARTITIONS,
   getInstitutionByPK: (...args: unknown[]) => getInstitutionByPK(...args),
-  queryAllByStatus: (...args: unknown[]) => queryAllByStatus(...args),
+  getAllInstitutionsCached: (...args: unknown[]) => getAllInstitutionsCached(...args),
 }));
 
 const { getInstitution, searchInstitutionsHandler, listInstitutions } = await import("./institutions");
@@ -37,7 +25,7 @@ function makeInstitution(overrides: Partial<InstitutionRecord> = {}): Institutio
 
 beforeEach(() => {
   getInstitutionByPK.mockReset();
-  queryAllByStatus.mockReset();
+  getAllInstitutionsCached.mockReset();
 });
 
 describe("getInstitution", () => {
@@ -59,40 +47,29 @@ describe("searchInstitutionsHandler", () => {
   it("returns an empty result for a blank query without touching DynamoDB", async () => {
     const result = await searchInstitutionsHandler("   ");
     expect(result).toEqual({ query: "   ", results: [], page: 1, pageSize: 25, total: 0 });
-    expect(queryAllByStatus).not.toHaveBeenCalled();
+    expect(getAllInstitutionsCached).not.toHaveBeenCalled();
   });
 
-  it("fetches every status partition as fuzzy-search candidates (no bundled local seed to fall back to, unlike EduVerify's own web/lib/search.ts)", async () => {
-    queryAllByStatus.mockResolvedValue([]);
+  it("uses the shared cached full-corpus candidate set (already merged across every status partition upstream) for a non-blank query", async () => {
+    getAllInstitutionsCached.mockResolvedValueOnce([]);
 
     await searchInstitutionsHandler("cape");
 
-    expect(queryAllByStatus).toHaveBeenCalledWith("REGISTERED");
-    expect(queryAllByStatus).toHaveBeenCalledWith("PROVISIONALLY REGISTERED");
-    expect(queryAllByStatus).toHaveBeenCalledWith("UNKNOWN");
+    expect(getAllInstitutionsCached).toHaveBeenCalledTimes(1);
   });
 
-  it("includes the public-university/TVET status partitions, or a public university would be invisible to search despite being findable by id", async () => {
-    queryAllByStatus.mockResolvedValue([]);
-
-    await searchInstitutionsHandler("cape");
-
-    expect(queryAllByStatus).toHaveBeenCalledWith("ESTABLISHED — HIGHER EDUCATION ACT");
-    expect(queryAllByStatus).toHaveBeenCalledWith("ESTABLISHED — CONTINUING EDUCATION AND TRAINING ACT");
-  });
-
-  it("fuzzy-matches a lowercase, non-prefix query against the full candidate set", async () => {
+  it("fuzzy-matches a lowercase, non-prefix query against the full cached candidate set", async () => {
     const uct = makeInstitution({ id: "uct", name: "University of Cape Town", institutionType: "Public University" });
-    queryAllByStatus.mockImplementation((status: string) => Promise.resolve(status === "REGISTERED" ? [uct] : []));
+    getAllInstitutionsCached.mockResolvedValueOnce([uct]);
 
     const result = await searchInstitutionsHandler("cape town");
 
     expect(result.results.some((r) => r.id === "uct")).toBe(true);
   });
 
-  it("dedupes an institution that appears in more than one status partition", async () => {
+  it("trusts the already-deduped candidate set getAllInstitutionsCached returns (dedupe now happens upstream in the cache, not here)", async () => {
     const uct = makeInstitution({ id: "uct", name: "University of Cape Town", institutionType: "Public University" });
-    queryAllByStatus.mockResolvedValue([uct]);
+    getAllInstitutionsCached.mockResolvedValueOnce([uct]);
 
     const result = await searchInstitutionsHandler("University of Cape Town");
 
@@ -102,7 +79,7 @@ describe("searchInstitutionsHandler", () => {
 
   it("applies filters after ranking", async () => {
     const gauteng = makeInstitution({ id: "g", name: "Gauteng College", province: "Gauteng" });
-    queryAllByStatus.mockImplementation((status: string) => Promise.resolve(status === "REGISTERED" ? [gauteng] : []));
+    getAllInstitutionsCached.mockResolvedValueOnce([gauteng]);
 
     const result = await searchInstitutionsHandler("College", { province: "Western Cape" });
 
@@ -113,7 +90,7 @@ describe("searchInstitutionsHandler", () => {
     const institutions = Array.from({ length: 30 }, (_, i) =>
       makeInstitution({ id: `i${i}`, name: `Cape College ${i}` }),
     );
-    queryAllByStatus.mockImplementation((status: string) => Promise.resolve(status === "REGISTERED" ? institutions : []));
+    getAllInstitutionsCached.mockResolvedValueOnce(institutions);
 
     const result = await searchInstitutionsHandler("Cape College");
 
@@ -127,7 +104,7 @@ describe("searchInstitutionsHandler", () => {
     const institutions = Array.from({ length: 30 }, (_, i) =>
       makeInstitution({ id: `i${i}`, name: `Cape College ${i}` }),
     );
-    queryAllByStatus.mockImplementation((status: string) => Promise.resolve(status === "REGISTERED" ? institutions : []));
+    getAllInstitutionsCached.mockResolvedValueOnce(institutions);
 
     const result = await searchInstitutionsHandler("Cape College", { page: 2, pageSize: 25 });
 
@@ -137,27 +114,40 @@ describe("searchInstitutionsHandler", () => {
 });
 
 describe("listInstitutions", () => {
-  it("defaults to the REGISTERED partition, page 1, pageSize 25", async () => {
-    const institutions = Array.from({ length: 30 }, (_, i) => makeInstitution({ id: `i${i}`, name: `Institution ${i}` }));
-    queryAllByStatus.mockResolvedValueOnce(institutions);
+  it("defaults to the REGISTERED status, page 1, pageSize 25", async () => {
+    const institutions = Array.from({ length: 30 }, (_, i) =>
+      makeInstitution({ id: `i${i}`, name: `Institution ${i}`, status: "Registered" }),
+    );
+    getAllInstitutionsCached.mockResolvedValueOnce(institutions);
 
     const result = await listInstitutions();
 
-    expect(queryAllByStatus).toHaveBeenCalledWith("REGISTERED");
+    expect(getAllInstitutionsCached).toHaveBeenCalledTimes(1);
     expect(result.page).toBe(1);
     expect(result.pageSize).toBe(25);
     expect(result.institutions).toHaveLength(25);
     expect(result.total).toBe(30);
   });
 
+  it("filters out institutions not matching the requested status (case-insensitively)", async () => {
+    const registered = makeInstitution({ id: "r1", name: "R1", status: "Registered" });
+    const cancelled = makeInstitution({ id: "c1", name: "C1", status: "Cancelled" });
+    getAllInstitutionsCached.mockResolvedValueOnce([registered, cancelled]);
+
+    const result = await listInstitutions();
+
+    expect(result.institutions.map((i) => i.id)).toEqual(["r1"]);
+  });
+
   it("returns a summary shape — no faculties_and_programmes, with a qualification count and faculty labels", async () => {
     const institution = makeInstitution({
       id: "i0",
+      status: "Registered",
       faculties_and_programmes: [
         { faculty: "Business", programmes: [{ qualId: 1, title: "Diploma", nqfLevelRaw: "6", subfield: "Business", originator: "x", framework: "HEQSF" }] },
       ],
     });
-    queryAllByStatus.mockResolvedValueOnce([institution]);
+    getAllInstitutionsCached.mockResolvedValueOnce([institution]);
 
     const result = await listInstitutions();
 
@@ -166,8 +156,10 @@ describe("listInstitutions", () => {
   });
 
   it("returns the second page correctly", async () => {
-    const institutions = Array.from({ length: 30 }, (_, i) => makeInstitution({ id: `i${i}`, name: `Institution ${i}` }));
-    queryAllByStatus.mockResolvedValueOnce(institutions);
+    const institutions = Array.from({ length: 30 }, (_, i) =>
+      makeInstitution({ id: `i${i}`, name: `Institution ${i}`, status: "Registered" }),
+    );
+    getAllInstitutionsCached.mockResolvedValueOnce(institutions);
 
     const result = await listInstitutions({ page: 2, pageSize: 25 });
 
@@ -177,10 +169,10 @@ describe("listInstitutions", () => {
 
   it("filters by province before paginating", async () => {
     const institutions = [
-      makeInstitution({ id: "g1", name: "G1", province: "Gauteng" }),
-      makeInstitution({ id: "wc1", name: "WC1", province: "Western Cape" }),
+      makeInstitution({ id: "g1", name: "G1", province: "Gauteng", status: "Registered" }),
+      makeInstitution({ id: "wc1", name: "WC1", province: "Western Cape", status: "Registered" }),
     ];
-    queryAllByStatus.mockResolvedValueOnce(institutions);
+    getAllInstitutionsCached.mockResolvedValueOnce(institutions);
 
     const result = await listInstitutions({ province: "Gauteng" });
 
@@ -188,31 +180,32 @@ describe("listInstitutions", () => {
     expect(result.total).toBe(1);
   });
 
-  it("uses a caller-specified status partition", async () => {
-    queryAllByStatus.mockResolvedValueOnce([]);
-    await listInstitutions({ status: "PROVISIONALLY REGISTERED" });
-    expect(queryAllByStatus).toHaveBeenCalledWith("PROVISIONALLY REGISTERED");
+  it("uses a caller-specified status filter over the shared cached candidate set", async () => {
+    const provisional = makeInstitution({ id: "p1", name: "P1", status: "Provisionally Registered" });
+    const registered = makeInstitution({ id: "r1", name: "R1", status: "Registered" });
+    getAllInstitutionsCached.mockResolvedValueOnce([provisional, registered]);
+
+    const result = await listInstitutions({ status: "PROVISIONALLY REGISTERED" });
+
+    expect(getAllInstitutionsCached).toHaveBeenCalledTimes(1);
+    expect(result.institutions.map((i) => i.id)).toEqual(["p1"]);
   });
 
-  it("status=ALL scans every partition and merges/dedupes, unlike the single-partition default", async () => {
-    const registered = makeInstitution({ id: "r1", name: "R1" });
-    const cancelled = makeInstitution({ id: "c1", name: "C1" });
-    queryAllByStatus.mockImplementation((status: string) =>
-      Promise.resolve(status === "REGISTERED" ? [registered] : status === "CANCELLED" ? [cancelled] : [])
-    );
+  it("status=ALL returns every institution from the shared cache without status filtering", async () => {
+    const registered = makeInstitution({ id: "r1", name: "R1", status: "Registered" });
+    const cancelled = makeInstitution({ id: "c1", name: "C1", status: "Cancelled" });
+    getAllInstitutionsCached.mockResolvedValueOnce([registered, cancelled]);
 
     const result = await listInstitutions({ status: "ALL", pageSize: 1000 });
 
-    for (const partition of MOCK_STATUS_PARTITIONS) {
-      expect(queryAllByStatus).toHaveBeenCalledWith(partition);
-    }
+    expect(getAllInstitutionsCached).toHaveBeenCalledTimes(1);
     expect(result.institutions.map((i) => i.id).sort()).toEqual(["c1", "r1"]);
     expect(result.total).toBe(2);
   });
 
-  it("status=ALL dedupes an institution that (incorrectly) appears in more than one partition", async () => {
-    const dup = makeInstitution({ id: "dup", name: "Dup" });
-    queryAllByStatus.mockImplementation((status: string) => Promise.resolve(status === "REGISTERED" ? [dup] : [dup]));
+  it("status=ALL trusts the already-deduped candidate set getAllInstitutionsCached returns", async () => {
+    const dup = makeInstitution({ id: "dup", name: "Dup", status: "Registered" });
+    getAllInstitutionsCached.mockResolvedValueOnce([dup]);
 
     const result = await listInstitutions({ status: "ALL", pageSize: 1000 });
 
@@ -222,11 +215,12 @@ describe("listInstitutions", () => {
   it("fields=full returns full InstitutionRecords (with faculties_and_programmes) instead of the summary shape", async () => {
     const institution = makeInstitution({
       id: "i0",
+      status: "Registered",
       faculties_and_programmes: [
         { faculty: "Business", programmes: [{ qualId: 1, title: "Diploma", nqfLevelRaw: "6", subfield: "Business", originator: "x", framework: "HEQSF" }] },
       ],
     });
-    queryAllByStatus.mockResolvedValueOnce([institution]);
+    getAllInstitutionsCached.mockResolvedValueOnce([institution]);
 
     const result = await listInstitutions({ fields: "full" });
 

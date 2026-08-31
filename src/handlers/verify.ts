@@ -1,4 +1,4 @@
-import { getInstitutionByRegistrationNumber, queryByNamePrefix } from "../lib/dynamodb";
+import { getAllInstitutionsCached, getInstitutionByRegistrationNumber } from "../lib/dynamodb";
 import { normalizeText } from "../lib/normalize";
 import { searchInstitutions } from "../lib/search";
 import type { InstitutionRecord } from "../lib/types";
@@ -33,7 +33,7 @@ export async function verifyInstitution(request: VerifyInstitutionRequest): Prom
 
   const name = request.name?.trim();
   if (name) {
-    const candidates = await queryByNamePrefix(name);
+    const candidates = (await getAllInstitutionsCached()).filter((institution) => institution.name.startsWith(name));
     const [best] = searchInstitutions(candidates, name, {}, 1);
     if (best) {
       const confidence = normalizeText(best.name) === normalizeText(name) ? "exact" : "high";
