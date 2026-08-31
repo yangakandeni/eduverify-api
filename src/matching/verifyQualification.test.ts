@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { InstitutionRecord } from "../lib/types";
 
-const queryByNamePrefix = vi.fn();
+const getAllInstitutionsCached = vi.fn();
 
 vi.mock("../lib/dynamodb", () => ({
-  queryByNamePrefix: (...args: unknown[]) => queryByNamePrefix(...args),
+  getAllInstitutionsCached: (...args: unknown[]) => getAllInstitutionsCached(...args),
 }));
 
 const { verifyQualification } = await import("./verifyQualification");
@@ -22,7 +22,7 @@ function makeInstitution(overrides: Partial<InstitutionRecord> = {}): Institutio
 }
 
 beforeEach(() => {
-  queryByNamePrefix.mockReset();
+  getAllInstitutionsCached.mockReset();
 });
 
 describe("verifyQualification", () => {
@@ -39,7 +39,7 @@ describe("verifyQualification", () => {
         },
       ],
     });
-    queryByNamePrefix.mockResolvedValueOnce([institution]);
+    getAllInstitutionsCached.mockResolvedValueOnce([institution]);
 
     const result = await verifyQualification({
       qualificationTitle: "Bachelor of Arts in Theatre",
@@ -65,7 +65,7 @@ describe("verifyQualification", () => {
         },
       ],
     });
-    queryByNamePrefix.mockResolvedValueOnce([institution]);
+    getAllInstitutionsCached.mockResolvedValueOnce([institution]);
 
     const result = await verifyQualification({
       qualificationTitle: "compter scince computer",
@@ -90,7 +90,7 @@ describe("verifyQualification", () => {
         },
       ],
     });
-    queryByNamePrefix.mockResolvedValueOnce([institution]);
+    getAllInstitutionsCached.mockResolvedValueOnce([institution]);
 
     const result = await verifyQualification({
       qualificationTitle: "Bachelor of Laws",
@@ -103,7 +103,7 @@ describe("verifyQualification", () => {
   });
 
   it("reports no match at all when the institution itself can't be found", async () => {
-    queryByNamePrefix.mockResolvedValueOnce([]);
+    getAllInstitutionsCached.mockResolvedValueOnce([]);
 
     const result = await verifyQualification({
       qualificationTitle: "Bachelor of Arts",
@@ -126,7 +126,7 @@ describe("verifyQualification", () => {
         },
       ],
     });
-    queryByNamePrefix.mockResolvedValueOnce([institution]);
+    getAllInstitutionsCached.mockResolvedValueOnce([institution]);
 
     const result = await verifyQualification({
       qualificationTitle: "Some Occupational Qualification",
@@ -150,7 +150,7 @@ describe("verifyQualification", () => {
         },
       ],
     });
-    queryByNamePrefix.mockResolvedValueOnce([institution]);
+    getAllInstitutionsCached.mockResolvedValueOnce([institution]);
 
     const result = await verifyQualification({
       qualificationTitle: "Some Occupational Qualification",

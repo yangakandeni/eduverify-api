@@ -1,6 +1,5 @@
-import { STATUS_PARTITIONS, queryAllByStatus } from "../lib/dynamodb";
+import { getAllInstitutionsCached } from "../lib/dynamodb";
 import { getAllProgrammes } from "../lib/facultiesAndProgrammes";
-import { dedupeById } from "./institutions";
 
 export interface StatsResult {
   totalInstitutions: number;
@@ -15,8 +14,7 @@ export interface StatsResult {
  * `totalProvinces` counts only provinces normalizeProvince actually resolved (excludes
  * "Unknown"), so the number reflects real geographic coverage rather than a fixed constant. */
 export async function getStats(): Promise<StatsResult> {
-  const partitions = await Promise.all(STATUS_PARTITIONS.map((status) => queryAllByStatus(status)));
-  const institutions = dedupeById(partitions.flat());
+  const institutions = await getAllInstitutionsCached();
 
   const totalQualifications = institutions.reduce(
     (sum, institution) => sum + getAllProgrammes(institution).length,

@@ -1,22 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { InstitutionRecord } from "../lib/types";
 
-const queryAllByStatus = vi.fn();
-
-const MOCK_STATUS_PARTITIONS = [
-  "REGISTERED",
-  "PROVISIONALLY REGISTERED",
-  "UNKNOWN",
-  "ESTABLISHED — HIGHER EDUCATION ACT",
-  "ESTABLISHED — CONTINUING EDUCATION AND TRAINING ACT",
-  "CANCELLED",
-  "DISCONTINUED",
-  "BOGUS",
-];
+const getAllInstitutionsCached = vi.fn();
 
 vi.mock("../lib/dynamodb", () => ({
-  STATUS_PARTITIONS: MOCK_STATUS_PARTITIONS,
-  queryAllByStatus: (...args: unknown[]) => queryAllByStatus(...args),
+  getAllInstitutionsCached: (...args: unknown[]) => getAllInstitutionsCached(...args),
 }));
 
 const { getStats } = await import("./stats");
@@ -34,29 +22,22 @@ function makeInstitution(overrides: Partial<InstitutionRecord> = {}): Institutio
 }
 
 beforeEach(() => {
-  queryAllByStatus.mockReset();
+  getAllInstitutionsCached.mockReset();
 });
 
 describe("getStats", () => {
-  it("scans every status partition, not just REGISTERED", async () => {
-    queryAllByStatus.mockResolvedValue([]);
+  it("uses the shared cached full-corpus candidate set (already merged across every status partition upstream)", async () => {
+    getAllInstitutionsCached.mockResolvedValueOnce([]);
 
     await getStats();
 
-    for (const partition of MOCK_STATUS_PARTITIONS) {
-      expect(queryAllByStatus).toHaveBeenCalledWith(partition);
-    }
+    expect(getAllInstitutionsCached).toHaveBeenCalledTimes(1);
   });
 
-  it("counts every institution across partitions, deduped by id", async () => {
+  it("counts every institution in the cached candidate set", async () => {
     const registered = makeInstitution({ id: "r1", name: "R1" });
     const cancelled = makeInstitution({ id: "c1", name: "C1" });
-    const dup = makeInstitution({ id: "r1", name: "R1 again" });
-    queryAllByStatus.mockImplementation((status: string) =>
-      Promise.resolve(
-        status === "REGISTERED" ? [registered, dup] : status === "CANCELLED" ? [cancelled] : [],
-      ),
-    );
+    getAllInstitutionsCached.mockResolvedValueOnce([registered, cancelled]);
 
     const result = await getStats();
 
@@ -82,7 +63,7 @@ describe("getStats", () => {
         },
       ],
     });
-    queryAllByStatus.mockImplementation((status: string) => Promise.resolve(status === "REGISTERED" ? [withQuals] : []));
+    getAllInstitutionsCached.mockResolvedValueOnce([withQuals]);
 
     const result = await getStats();
 
@@ -94,9 +75,7 @@ describe("getStats", () => {
     const gauteng2 = makeInstitution({ id: "g2", province: "Gauteng" });
     const westernCape = makeInstitution({ id: "wc1", province: "Western Cape" });
     const unresolved = makeInstitution({ id: "u1", province: "Unknown" });
-    queryAllByStatus.mockImplementation((status: string) =>
-      Promise.resolve(status === "REGISTERED" ? [gauteng1, gauteng2, westernCape, unresolved] : []),
-    );
+    getAllInstitutionsCached.mockResolvedValueOnce([gauteng1, gauteng2, westernCape, unresolved]);
 
     const result = await getStats();
 
@@ -104,7 +83,7 @@ describe("getStats", () => {
   });
 
   it("returns zero counts when the table has no institutions", async () => {
-    queryAllByStatus.mockResolvedValue([]);
+    getAllInstitutionsCached.mockResolvedValueOnce([]);
 
     const result = await getStats();
 
