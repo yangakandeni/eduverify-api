@@ -48,7 +48,7 @@ variable "lambda_architecture" {
 
 variable "lambda_memory_size" {
   type    = number
-  default = 512
+  default = 1536
 }
 
 variable "lambda_timeout" {

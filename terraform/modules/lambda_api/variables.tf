@@ -23,7 +23,7 @@ variable "architecture" {
 
 variable "memory_size" {
   type    = number
-  default = 512
+  default = 1536
 }
 
 variable "timeout" {

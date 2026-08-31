@@ -1,5 +1,5 @@
 import { getAllProgrammes } from "../lib/facultiesAndProgrammes";
-import { queryByNamePrefix } from "../lib/dynamodb";
+import { getAllInstitutionsCached } from "../lib/dynamodb";
 import { normalizeText } from "../lib/normalize";
 import { matchesQualificationSearch } from "../lib/qualificationSearch";
 import { searchInstitutions } from "../lib/search";
@@ -29,7 +29,9 @@ export interface VerifyQualificationResult {
  * verification signal rather than a ranking one. */
 export async function verifyQualification(request: VerifyQualificationRequest): Promise<VerifyQualificationResult> {
   const institutionName = request.institutionName.trim();
-  const candidates = await queryByNamePrefix(institutionName);
+  const candidates = (await getAllInstitutionsCached()).filter((institution) =>
+    institution.name.startsWith(institutionName),
+  );
   const [institution] = searchInstitutions(candidates, institutionName, {}, 1);
   if (!institution) return { matched: false, confidence: "none" };
 
