@@ -50,24 +50,28 @@ public university/TVET lists, in the same shape `parser/dynamo_item.py` bakes in
 table.
 
 ```bash
-npm run dynamodb:local   # terminal 1 — docker run amazon/dynamodb-local on :8000
-npm run seed:local       # terminal 2 — creates the table (if needed) and loads data/*.json
-npm run dev              # terminal 2 — dev server on :3000, proxying to router.ts
+npm run dynamodb:local                                     # terminal 1 — docker run amazon/dynamodb-local on :8000
+DYNAMODB_ENDPOINT=http://localhost:8000 npm run seed:local # terminal 2 — creates the table (if needed) and loads data/*.json
+DYNAMODB_ENDPOINT=http://localhost:8000 PORT=4000 npm run dev # terminal 2 — dev server, proxying to router.ts
 ```
+
+`PORT=4000` above matches what the sibling `eduverify` web app's `.env.local` expects
+(`EDUVERIFY_API_BASE_URL=http://localhost:4000`) — its own `next dev` already owns `:3000`.
+Drop it (or pick any other port) if you're hitting this API standalone.
 
 Then hit any route directly, e.g.:
 
 ```bash
-curl http://localhost:3000/v1/health
-curl http://localhost:3000/v1/stats
-curl "http://localhost:3000/v1/institutions/search?q=cape+town"
-curl "http://localhost:3000/v1/institutions/list?page=1&pageSize=25"
-curl -X POST http://localhost:3000/v1/institutions/verify \
+curl http://localhost:4000/v1/health
+curl http://localhost:4000/v1/stats
+curl "http://localhost:4000/v1/institutions/search?q=cape+town"
+curl "http://localhost:4000/v1/institutions/list?page=1&pageSize=25"
+curl -X POST http://localhost:4000/v1/institutions/verify \
   -H "Content-Type: application/json" \
   -d '{"registrationNumber": "2000/HE07/015"}'
 ```
 
-Same in Postman: point requests at `http://localhost:3000/v1/...` — `x-api-key` is read from the
+Same in Postman: point requests at `http://localhost:4000/v1/...` — `x-api-key` is read from the
 request header exactly like the deployed API Gateway route would (see `src/tiers.ts`).
 
 - `scripts/dev-server.ts` is a plain Node HTTP server standing in for API Gateway's proxy
@@ -79,7 +83,23 @@ request header exactly like the deployed API Gateway route would (see `src/tiers
   eduverify's own `scripts/seed_dynamodb.py` does against the real table).
 - Both scripts (and `src/lib/dynamodb.ts` itself) read `DYNAMODB_ENDPOINT` — set only for local
   dev, never in a deployed environment — to point the AWS SDK at DynamoDB Local with a fixed
-  dummy credential pair instead of the real AWS endpoint/credentials.
+  dummy credential pair instead of the real AWS endpoint/credentials. **`npm run dev` must have
+  this set too**, not just the seed script — if it's missing, `dynamodb.ts` silently falls back
+  to the real AWS credential chain, which then tries to refresh your SSO session and fails once
+  it's expired (`CredentialsProviderError: Your session has expired`), surfacing as a 500 on
+  every route that touches DynamoDB even though DynamoDB Local is up and seeded:
+  ```bash
+  DYNAMODB_ENDPOINT=http://localhost:8000 npm run seed:local
+  DYNAMODB_ENDPOINT=http://localhost:8000 PORT=4000 npm run dev
+  ```
+- If `:8000` is already taken by something else on your machine (e.g. another project's docker
+  stack), `dynamodb:local`'s `PORT` var picks a different port for the container — just point
+  `DYNAMODB_ENDPOINT` at the same port for `seed:local` and `dev`:
+  ```bash
+  PORT=8001 npm run dynamodb:local                          # terminal 1
+  DYNAMODB_ENDPOINT=http://localhost:8001 npm run seed:local
+  DYNAMODB_ENDPOINT=http://localhost:8001 PORT=4000 npm run dev
+  ```
 
 ## API docs
 
